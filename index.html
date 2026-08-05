@@ -45,7 +45,7 @@
 <!-- Icons -->
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
-<!-- Supabase JS SDK -->
+<!-- Supabase JS SDK (aktuell inaktiv, siehe Kommentar im Script-Bereich) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -60,7 +60,8 @@
 
   /* Native Datum/Zeit-Picker-Icons für Dark Mode aufhellen */
   input[type="date"]::-webkit-calendar-picker-indicator,
-  input[type="time"]::-webkit-calendar-picker-indicator {
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     filter: invert(0.75);
     cursor: pointer;
   }
@@ -151,7 +152,7 @@
           </h2>
           <p class="text-sm text-muted mt-1" id="todayLabel"></p>
         </div>
-        <span id="demoBadge" class="hidden sm:inline-flex text-[10px] uppercase tracking-wide text-muted border border-line rounded-full px-2.5 py-1">Demo-Daten</span>
+        <span id="demoBadge" class="hidden sm:inline-flex text-[10px] uppercase tracking-wide text-muted border border-line rounded-full px-2.5 py-1" title="Ohne Supabase-Verbindung werden Änderungen nur im Browser-Speicher gehalten und gehen beim Neuladen verloren.">Lokale Vorschau</span>
       </div>
 
       <!-- Live / Als Nächstes (Signatur-Element) -->
@@ -212,7 +213,7 @@
             </button>
           </div>
           <button id="addEntryBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
-            <i data-lucide="plus" class="h-4 w-4"></i> Kurs
+            <i data-lucide="plus" class="h-4 w-4"></i> Termin
           </button>
         </div>
       </div>
@@ -221,22 +222,27 @@
 
     <!-- ---------- C) DOZENTEN & KONTAKTE ---------- -->
     <section id="lecturers">
-      <h2 class="font-display text-2xl text-ink font-semibold flex items-center gap-2 mb-6">
-        <i data-lucide="users" class="h-5 w-5 text-flame"></i>
-        Dozenten & Kontakte
-      </h2>
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h2 class="font-display text-2xl text-ink font-semibold flex items-center gap-2">
+          <i data-lucide="users" class="h-5 w-5 text-flame"></i>
+          Dozenten & Kontakte
+        </h2>
+        <button id="addLecturerBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
+          <i data-lucide="plus" class="h-4 w-4"></i> Dozent
+        </button>
+      </div>
       <div id="lecturersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </section>
 
   </main>
 
   <!-- ============================================================
-       MODAL: Kurs hinzufügen / bearbeiten (nur Admin)
+       MODAL: Termin hinzufügen / bearbeiten (nur Admin)
   ============================================================= -->
   <div id="scheduleModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div class="w-full max-w-md rounded-2xl bg-surface border border-line shadow-card p-6">
       <div class="flex items-center justify-between mb-5">
-        <h3 id="scheduleModalTitle" class="font-display text-lg text-ink font-semibold">Kurs hinzufügen</h3>
+        <h3 id="scheduleModalTitle" class="font-display text-lg text-ink font-semibold">Termin hinzufügen</h3>
         <button id="scheduleModalClose" class="text-muted hover:text-ink transition" aria-label="Schließen">
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
@@ -244,40 +250,67 @@
       <form id="scheduleForm" class="space-y-4">
         <input type="hidden" id="entryId">
         <div>
-          <label class="block text-xs text-muted mb-1">Datum</label>
-          <input required type="date" id="entryDate" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
+          <label class="block text-xs text-muted mb-1">Fach / Veranstaltung</label>
+          <input required type="text" id="entryName" placeholder="z. B. Softwareentwicklung II" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-muted mb-1">Start</label>
-            <input required type="time" id="entryStart" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
+            <input required type="datetime-local" id="entryStart" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
           <div>
             <label class="block text-xs text-muted mb-1">Ende</label>
-            <input required type="time" id="entryEnd" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
+            <input required type="datetime-local" id="entryEnd" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
         </div>
-        <div>
-          <label class="block text-xs text-muted mb-1">Kursname</label>
-          <input required type="text" id="entryName" placeholder="z. B. Softwareentwicklung II" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs text-muted mb-1">Raum</label>
-            <input required type="text" id="entryRoom" placeholder="A1.12" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+            <label class="block text-xs text-muted mb-1">Hauptraum</label>
+            <input required type="text" id="entryRoom1" placeholder="A1.12" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
           <div>
-            <label class="block text-xs text-muted mb-1">Typ</label>
-            <select id="entryType" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
-              <option value="lecture">Vorlesung</option>
-              <option value="exam">Klausur</option>
-            </select>
+            <label class="block text-xs text-muted mb-1">Nebenraum (optional)</label>
+            <input type="text" id="entryRoom2" placeholder="B2.03" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
         </div>
+        <p class="text-xs text-muted">Tipp: Enthält der Name "Klausur", wird der Termin automatisch als Klausur markiert (rote Markierung, Countdown).</p>
+        <button type="submit" class="w-full rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL: Dozent hinzufügen (nur Admin)
+  ============================================================= -->
+  <div id="lecturerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-2xl bg-surface border border-line shadow-card p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-display text-lg text-ink font-semibold">Dozent hinzufügen</h3>
+        <button id="lecturerModalClose" class="text-muted hover:text-ink transition" aria-label="Schließen">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <form id="lecturerForm" class="space-y-4">
         <div>
-          <label class="block text-xs text-muted mb-1">Dozent (optional)</label>
-          <input type="text" id="entryLecturer" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
+          <label class="block text-xs text-muted mb-1">Name</label>
+          <input required type="text" id="lecturerName" placeholder="Prof. Dr. Nachname" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
         </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">E-Mail</label>
+          <input required type="email" id="lecturerEmail" placeholder="name@dhbw-example.de" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">Sprechzeiten</label>
+          <input required type="text" id="lecturerOfficeHours" placeholder="Mi 14:00–15:00 Uhr" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">Raum</label>
+          <input required type="text" id="lecturerRoom" placeholder="B2.14" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <label class="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" id="lecturerStatus" class="h-4 w-4 rounded border-line bg-surface2 accent-flame">
+          Sprechstunde bereits gebucht?
+        </label>
         <button type="submit" class="w-full rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
       </form>
     </div>
@@ -289,27 +322,26 @@
   ================================================================= */
   const CONFIG = {
     dashboardTitle: 'Campus Dashboard',
-    courseName: 'TINF23 B3', // TODO: eigenen Kurs eintragen
+    courseName: 'Mein Kurs', // TODO: eigenen Kurs eintragen
   };
 
   /* ================================================================
      SUPABASE — Zugangsdaten & Tabellen
      ----------------------------------------------------------------
-     Sobald ein Supabase-Projekt existiert, hier URL + Key eintragen.
-     Bis dahin läuft das Dashboard automatisch mit Demo-Daten weiter
-     (siehe generateDemoSchedule() / generateDemoLecturers() unten).
+     Dieser Block ist aktuell INAKTIV (nur Vorbereitung für später).
+     Solange SUPABASE_URL / SUPABASE_ANON_KEY nicht gesetzt sind,
+     laufen Stundenplan und Dozenten rein lokal im Browser-Speicher
+     (siehe state.schedule / state.lecturers weiter unten).
 
-     Erwartete Tabellen in Supabase:
+     Erwartete Tabellen, sobald Supabase angebunden wird:
 
      1) "schedule"
         - id           uuid / int8  (Primary Key)
-        - date         date         z. B. 2026-08-05
-        - start_time   text/time    z. B. "09:00"
-        - end_time     text/time    z. B. "10:30"
-        - course_name  text
-        - room         text
-        - type         text         "lecture" | "exam"
-        - lecturer     text         optional
+        - name         text          Fach / Veranstaltung
+        - startTime    timestamp     Beginn (Datum + Uhrzeit)
+        - endTime      timestamp     Ende (Datum + Uhrzeit)
+        - rooms__001   text          Hauptraum
+        - rooms__002   text          Nebenraum (optional)
 
      2) "lecturers"
         - id                  uuid / int8  (Primary Key)
@@ -346,10 +378,6 @@
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   }
-  function parseIsoDateLocal(iso) {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  }
   function addDays(date, days) {
     const d = new Date(date);
     d.setDate(d.getDate() + days);
@@ -363,10 +391,16 @@
     d.setHours(0, 0, 0, 0);
     return d;
   }
-  function formatDateDe(iso) {
-    return parseIsoDateLocal(iso).toLocaleDateString('de-DE', {
-      weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
-    });
+  function startOfDay(d) {
+    const c = new Date(d);
+    c.setHours(0, 0, 0, 0);
+    return c;
+  }
+  function formatTime(dtStr) {
+    return new Date(dtStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+  function formatDateDe(dtStr) {
+    return new Date(dtStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
   }
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -377,56 +411,27 @@
   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
 
   /* ================================================================
-     DEMO-DATEN (werden nur genutzt, solange Supabase nicht konfiguriert ist)
-     Termine werden relativ zur aktuellen Woche erzeugt, damit die
-     "Live"-Anzeige und der Klausuren-Countdown beim Testen sinnvoll aussehen.
+     STUNDENPLAN-HILFSFUNKTIONEN
+     (Klausur-Erkennung läuft rein über den Namen — kein separates
+      "Typ"-Feld, siehe Tipp-Text im Termin-Formular)
   ================================================================= */
-  function examEntry(date, start, end, name, room, lecturer) {
-    return {
-      id: crypto.randomUUID(), date: isoDate(date),
-      start_time: start, end_time: end,
-      course_name: name, room, type: 'exam', lecturer,
-    };
+  function isExamEntry(e) {
+    return /klausur/i.test(e.name);
   }
-
-  function generateDemoSchedule() {
-    const monday = getMonday(new Date());
-    const entries = [];
-    const push = (dayOffset, start, end, name, room, type, lecturer) => {
-      entries.push({
-        id: crypto.randomUUID(),
-        date: isoDate(addDays(monday, dayOffset)),
-        start_time: start, end_time: end,
-        course_name: name, room, type, lecturer: lecturer || null,
-      });
-    };
-    // Diese Woche (Mo–Fr)
-    push(0, '09:00', '10:30', 'Softwareentwicklung II', 'A1.12', 'lecture', 'Prof. Dr. Keller');
-    push(0, '10:45', '12:15', 'Mathematik III', 'A1.05', 'lecture', 'Prof. Dr. Vogt');
-    push(1, '08:00', '09:30', 'Datenbanksysteme', 'B2.03', 'lecture', 'Prof. Dr. Nauer');
-    push(1, '13:00', '14:30', 'BWL Grundlagen', 'A2.01', 'lecture', 'Prof. Dr. Brandt');
-    push(2, '09:00', '12:00', 'Programmierpraktikum Java', 'PC-Pool 1', 'lecture', 'M. Schuster');
-    push(2, '13:15', '14:45', 'Softwareentwicklung II', 'A1.12', 'lecture', 'Prof. Dr. Keller');
-    push(3, '10:45', '12:15', 'Rechnernetze', 'B1.10', 'lecture', 'Prof. Dr. Nauer');
-    push(4, '09:00', '10:30', 'Wirtschaftsenglisch', 'A1.08', 'lecture', 'C. Fields');
-    // Klausuren in den nächsten Wochen (für den Countdown)
-    entries.push(examEntry(addDays(monday, 16), '09:00', '10:30', 'Klausur Datenbanksysteme', 'Aula', 'Prof. Dr. Nauer'));
-    entries.push(examEntry(addDays(monday, 23), '11:00', '13:00', 'Klausur Mathematik III', 'Aula', 'Prof. Dr. Vogt'));
-    return entries;
+  function formatRooms(e) {
+    return [e.rooms__001, e.rooms__002].filter(Boolean).join(' · ');
   }
-
-  function generateDemoLecturers() {
-    return [
-      { id: crypto.randomUUID(), name: 'Prof. Dr. Nauer', email: 'nauer@dhbw-example.de', office_hours: 'Mi 14:00–15:00 Uhr', room: 'B2.14', appointment_booked: false },
-      { id: crypto.randomUUID(), name: 'Prof. Dr. Vogt', email: 'vogt@dhbw-example.de', office_hours: 'Do 10:00–11:00 Uhr', room: 'A1.09', appointment_booked: true },
-      { id: crypto.randomUUID(), name: 'Prof. Dr. Keller', email: 'keller@dhbw-example.de', office_hours: 'Di 13:00–14:00 Uhr', room: 'A1.20', appointment_booked: false },
-      { id: crypto.randomUUID(), name: 'Prof. Dr. Brandt', email: 'brandt@dhbw-example.de', office_hours: 'nach Vereinbarung', room: 'A2.05', appointment_booked: true },
-      { id: crypto.randomUUID(), name: 'M. Schuster', email: 'schuster@dhbw-example.de', office_hours: 'Fr 09:00–10:00 Uhr', room: 'PC-Pool 1', appointment_booked: false },
-    ];
+  function entryDayIso(e) {
+    return isoDate(new Date(e.startTime));
   }
 
   /* ================================================================
      GLOBALER ZUSTAND
+     ----------------------------------------------------------------
+     Stundenplan und Dozenten liegen (noch) ausschließlich als
+     einfache JavaScript-Arrays im Speicher — ohne Supabase-Anbindung
+     gehen Änderungen beim Neuladen der Seite verloren. Das ist für
+     diesen Zwischenschritt (Frontend-Aufbau) so gewollt.
   ================================================================= */
   const TODO_STORAGE_KEY = 'dhbw_dashboard_todos';
 
@@ -445,20 +450,18 @@
   const state = {
     isAdmin: false,
     weekOffset: 0,
-    schedule: generateDemoSchedule(),
-    lecturers: generateDemoLecturers(),
+    schedule: [],   // { id, name, startTime, endTime, rooms__001, rooms__002 }
+    lecturers: [],  // { id, name, email, office_hours, room, appointment_booked }
     todos: loadTodosFromStorage(),
   };
 
   /* ================================================================
-     SUPABASE-ZUGRIFFSFUNKTIONEN
-     (fallen automatisch auf die lokalen Demo-Daten zurück, solange
-      SUPABASE_URL / SUPABASE_ANON_KEY nicht gesetzt sind)
+     DATENZUGRIFF (Supabase, falls konfiguriert — sonst lokales Array)
   ================================================================= */
   async function loadSchedule() {
     if (supabaseClient) {
       const { data, error } = await supabaseClient
-        .from(SUPABASE_TABLE_SCHEDULE).select('*').order('date', { ascending: true });
+        .from(SUPABASE_TABLE_SCHEDULE).select('*').order('startTime', { ascending: true });
       if (error) { console.error(error); return state.schedule; }
       return data;
     }
@@ -477,6 +480,11 @@
     state.schedule = await loadSchedule();
     renderAll();
   }
+  async function refreshLecturers() {
+    state.lecturers = await loadLecturers();
+    renderAll();
+  }
+
   async function addScheduleEntry(entry) {
     if (supabaseClient) {
       const { error } = await supabaseClient.from(SUPABASE_TABLE_SCHEDULE).insert(entry);
@@ -506,6 +514,26 @@
     }
     await refreshSchedule();
   }
+
+  async function addLecturer(entry) {
+    if (supabaseClient) {
+      const { error } = await supabaseClient.from(SUPABASE_TABLE_LECTURERS).insert(entry);
+      if (error) return alert('Fehler beim Speichern: ' + error.message);
+    } else {
+      entry.id = crypto.randomUUID();
+      state.lecturers.push(entry);
+    }
+    await refreshLecturers();
+  }
+  async function deleteLecturer(id) {
+    if (supabaseClient) {
+      const { error } = await supabaseClient.from(SUPABASE_TABLE_LECTURERS).delete().eq('id', id);
+      if (error) return alert('Fehler beim Löschen: ' + error.message);
+    } else {
+      state.lecturers = state.lecturers.filter(x => x.id !== id);
+    }
+    await refreshLecturers();
+  }
   async function updateLecturerStatus(id, value) {
     if (supabaseClient) {
       const { error } = await supabaseClient.from(SUPABASE_TABLE_LECTURERS).update({ appointment_booked: value }).eq('id', id);
@@ -522,57 +550,50 @@
   /* ================================================================
      RENDER: Live / Als Nächstes
   ================================================================= */
-  function toMinutes(t) {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  }
-
   function renderLiveCard() {
     const now = new Date();
     const todayIso = isoDate(now);
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
     const todaysEntries = state.schedule
-      .filter(e => e.date === todayIso)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+      .filter(e => entryDayIso(e) === todayIso)
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-    const current = todaysEntries.find(e => nowMinutes >= toMinutes(e.start_time) && nowMinutes < toMinutes(e.end_time));
-    const next = todaysEntries.find(e => toMinutes(e.start_time) > nowMinutes);
+    const current = todaysEntries.find(e => now >= new Date(e.startTime) && now < new Date(e.endTime));
+    const next = todaysEntries.find(e => new Date(e.startTime) > now);
 
     const label = document.getElementById('liveLabel');
     const content = document.getElementById('liveContent');
 
     if (current) {
-      const total = toMinutes(current.end_time) - toMinutes(current.start_time);
-      const progress = Math.min(100, Math.max(0, Math.round(((nowMinutes - toMinutes(current.start_time)) / total) * 100)));
+      const start = new Date(current.startTime), end = new Date(current.endTime);
+      const progress = Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
       label.textContent = 'Läuft gerade';
       content.innerHTML = `
-        <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-3">${escapeHtml(current.course_name)}</h3>
+        <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-3">${escapeHtml(current.name)}</h3>
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted mb-5">
-          <span class="flex items-center gap-1.5"><i data-lucide="clock" class="h-4 w-4"></i>${current.start_time} – ${current.end_time} Uhr</span>
-          <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i>${escapeHtml(current.room)}</span>
-          ${current.lecturer ? `<span class="flex items-center gap-1.5"><i data-lucide="user" class="h-4 w-4"></i>${escapeHtml(current.lecturer)}</span>` : ''}
+          <span class="flex items-center gap-1.5"><i data-lucide="clock" class="h-4 w-4"></i>${formatTime(current.startTime)} – ${formatTime(current.endTime)} Uhr</span>
+          <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i>${escapeHtml(formatRooms(current))}</span>
         </div>
         <div class="h-1.5 w-full rounded-full bg-surface2 overflow-hidden">
           <div class="h-full rounded-full bg-flame transition-all duration-500" style="width:${progress}%"></div>
         </div>
-        <p class="mt-2 text-xs font-mono text-muted">endet um ${current.end_time} Uhr</p>`;
+        <p class="mt-2 text-xs font-mono text-muted">endet um ${formatTime(current.endTime)} Uhr</p>`;
     } else if (next) {
-      const diff = toMinutes(next.start_time) - nowMinutes;
-      const hrs = Math.floor(diff / 60), mins = diff % 60;
+      const diffMin = Math.round((new Date(next.startTime) - now) / 60000);
+      const hrs = Math.floor(diffMin / 60), mins = diffMin % 60;
       label.textContent = 'Als Nächstes';
       content.innerHTML = `
-        <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-3">${escapeHtml(next.course_name)}</h3>
+        <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-3">${escapeHtml(next.name)}</h3>
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
-          <span class="flex items-center gap-1.5"><i data-lucide="clock" class="h-4 w-4"></i>${next.start_time} – ${next.end_time} Uhr</span>
-          <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i>${escapeHtml(next.room)}</span>
+          <span class="flex items-center gap-1.5"><i data-lucide="clock" class="h-4 w-4"></i>${formatTime(next.startTime)} – ${formatTime(next.endTime)} Uhr</span>
+          <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i>${escapeHtml(formatRooms(next))}</span>
         </div>
         <p class="mt-4 font-mono text-sm text-flame">in ${hrs > 0 ? hrs + ' Std ' : ''}${mins} Min</p>`;
     } else {
       label.textContent = 'Pause';
       content.innerHTML = `
         <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-2">Heute keine weiteren Termine</h3>
-        <p class="text-sm text-muted">Genieß die freie Zeit ☕</p>`;
+        <p class="text-sm text-muted">${state.schedule.length === 0 ? 'Noch keine Termine im Stundenplan hinterlegt.' : 'Genieß die freie Zeit ☕'}</p>`;
     }
     lucide.createIcons();
   }
@@ -582,12 +603,12 @@
   ================================================================= */
   function renderExamCountdown() {
     const container = document.getElementById('examList');
-    const todayIso = isoDate(new Date());
+    const now = new Date();
 
     const exams = state.schedule
-      .filter(e => e.type === 'exam' || /klausur/i.test(e.course_name))
-      .filter(e => e.date >= todayIso)
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .filter(isExamEntry)
+      .filter(e => new Date(e.startTime) >= startOfDay(now))
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
     if (exams.length === 0) {
       container.innerHTML = `<p class="text-sm text-muted">Aktuell keine anstehenden Klausuren.</p>`;
@@ -595,13 +616,13 @@
     }
 
     container.innerHTML = exams.map(e => {
-      const days = Math.round((parseIsoDateLocal(e.date) - parseIsoDateLocal(todayIso)) / 86400000);
+      const days = Math.round((startOfDay(new Date(e.startTime)) - startOfDay(now)) / 86400000);
       const daysLabel = days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`;
       return `
         <div class="flex items-center justify-between rounded-xl border border-line bg-surface2/60 px-4 py-3">
           <div>
-            <p class="text-sm text-ink font-medium">${escapeHtml(e.course_name)}</p>
-            <p class="text-xs text-muted font-mono">${formatDateDe(e.date)}</p>
+            <p class="text-sm text-ink font-medium">${escapeHtml(e.name)}</p>
+            <p class="text-xs text-muted font-mono">${formatDateDe(e.startTime)}</p>
           </div>
           <span class="shrink-0 rounded-full bg-alert/15 text-alert text-xs font-mono px-3 py-1">${daysLabel}</span>
         </div>`;
@@ -663,13 +684,12 @@
      RENDER: Stundenplan (Wochenkalender)
   ================================================================= */
   function scheduleCardHtml(e) {
-    const isExam = e.type === 'exam';
-    const accentClass = isExam ? 'border-l-alert' : 'border-l-signal';
+    const accentClass = isExamEntry(e) ? 'border-l-alert' : 'border-l-signal';
     return `
       <div class="group relative rounded-xl border border-line border-l-4 ${accentClass} bg-surface p-3 shadow-card">
-        <p class="text-xs font-mono text-muted">${e.start_time} – ${e.end_time}</p>
-        <p class="text-sm font-medium text-ink mt-0.5">${escapeHtml(e.course_name)}</p>
-        <p class="text-xs text-muted mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(e.room)}</p>
+        <p class="text-xs font-mono text-muted">${formatTime(e.startTime)} – ${formatTime(e.endTime)}</p>
+        <p class="text-sm font-medium text-ink mt-0.5">${escapeHtml(e.name)}</p>
+        <p class="text-xs text-muted mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(formatRooms(e))}</p>
         ${state.isAdmin ? `
           <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
             <button data-edit-entry="${e.id}" class="p-1 rounded-md bg-surface2 hover:bg-line text-muted hover:text-ink transition"><i data-lucide="pencil" class="h-3 w-3"></i></button>
@@ -691,8 +711,8 @@
       const dayIso = isoDate(day);
       const isToday = dayIso === todayIso;
       const dayEntries = state.schedule
-        .filter(e => e.date === dayIso)
-        .sort((a, b) => a.start_time.localeCompare(b.start_time));
+        .filter(e => entryDayIso(e) === dayIso)
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
       return `
         <div class="flex flex-col gap-3">
@@ -723,19 +743,17 @@
     }
   });
 
-  /* ---------------- Admin-Modal: Kurs hinzufügen / bearbeiten ---------------- */
+  /* ---------------- Admin-Modal: Termin hinzufügen / bearbeiten ---------------- */
   const scheduleModal = document.getElementById('scheduleModal');
 
   function openScheduleModal(entry = null) {
-    document.getElementById('scheduleModalTitle').textContent = entry ? 'Kurs bearbeiten' : 'Kurs hinzufügen';
+    document.getElementById('scheduleModalTitle').textContent = entry ? 'Termin bearbeiten' : 'Termin hinzufügen';
     document.getElementById('entryId').value = entry ? entry.id : '';
-    document.getElementById('entryDate').value = entry ? entry.date : isoDate(new Date());
-    document.getElementById('entryStart').value = entry ? entry.start_time : '';
-    document.getElementById('entryEnd').value = entry ? entry.end_time : '';
-    document.getElementById('entryName').value = entry ? entry.course_name : '';
-    document.getElementById('entryRoom').value = entry ? entry.room : '';
-    document.getElementById('entryType').value = entry ? entry.type : 'lecture';
-    document.getElementById('entryLecturer').value = entry && entry.lecturer ? entry.lecturer : '';
+    document.getElementById('entryName').value = entry ? entry.name : '';
+    document.getElementById('entryStart').value = entry ? entry.startTime : '';
+    document.getElementById('entryEnd').value = entry ? entry.endTime : '';
+    document.getElementById('entryRoom1').value = entry ? entry.rooms__001 : '';
+    document.getElementById('entryRoom2').value = entry && entry.rooms__002 ? entry.rooms__002 : '';
     scheduleModal.classList.remove('hidden');
   }
   function closeScheduleModal() { scheduleModal.classList.add('hidden'); }
@@ -748,13 +766,11 @@
     e.preventDefault();
     const id = document.getElementById('entryId').value;
     const entry = {
-      date: document.getElementById('entryDate').value,
-      start_time: document.getElementById('entryStart').value,
-      end_time: document.getElementById('entryEnd').value,
-      course_name: document.getElementById('entryName').value.trim(),
-      room: document.getElementById('entryRoom').value.trim(),
-      type: document.getElementById('entryType').value,
-      lecturer: document.getElementById('entryLecturer').value.trim() || null,
+      name: document.getElementById('entryName').value.trim(),
+      startTime: document.getElementById('entryStart').value,
+      endTime: document.getElementById('entryEnd').value,
+      rooms__001: document.getElementById('entryRoom1').value.trim(),
+      rooms__002: document.getElementById('entryRoom2').value.trim() || null,
     };
     if (id) await updateScheduleEntry(id, entry);
     else await addScheduleEntry(entry);
@@ -772,8 +788,18 @@
 
   function renderLecturers() {
     const grid = document.getElementById('lecturersGrid');
+
+    if (state.lecturers.length === 0) {
+      grid.innerHTML = `<p class="text-sm text-muted">Noch keine Dozenten hinterlegt.${state.isAdmin ? ' Leg über "+ Dozent" den ersten Eintrag an.' : ''}</p>`;
+      return;
+    }
+
     grid.innerHTML = state.lecturers.map(l => `
-      <div class="rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col gap-4">
+      <div class="group relative rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col gap-4">
+        ${state.isAdmin ? `
+          <button data-delete-lecturer="${l.id}" class="absolute top-3 right-3 hidden group-hover:flex p-1.5 rounded-md bg-surface2 hover:bg-line text-muted hover:text-alert transition" aria-label="Dozent löschen">
+            <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+          </button>` : ''}
         <div class="flex items-center gap-3">
           <div class="h-11 w-11 rounded-full bg-signal/15 flex items-center justify-center font-display text-signal font-semibold shrink-0">
             ${initials(l.name)}
@@ -801,10 +827,41 @@
   }
 
   document.getElementById('lecturersGrid').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-toggle-lecturer]');
-    if (!btn) return;
-    const lecturer = state.lecturers.find(x => x.id === btn.dataset.toggleLecturer);
-    if (lecturer) updateLecturerStatus(lecturer.id, !lecturer.appointment_booked);
+    const toggleBtn = e.target.closest('[data-toggle-lecturer]');
+    const deleteBtn = e.target.closest('[data-delete-lecturer]');
+    if (toggleBtn) {
+      const lecturer = state.lecturers.find(x => x.id === toggleBtn.dataset.toggleLecturer);
+      if (lecturer) updateLecturerStatus(lecturer.id, !lecturer.appointment_booked);
+    }
+    if (deleteBtn) {
+      if (confirm('Diesen Dozenten wirklich löschen?')) deleteLecturer(deleteBtn.dataset.deleteLecturer);
+    }
+  });
+
+  /* ---------------- Admin-Modal: Dozent hinzufügen ---------------- */
+  const lecturerModal = document.getElementById('lecturerModal');
+
+  function openLecturerModal() {
+    document.getElementById('lecturerForm').reset();
+    lecturerModal.classList.remove('hidden');
+  }
+  function closeLecturerModal() { lecturerModal.classList.add('hidden'); }
+
+  document.getElementById('addLecturerBtn').addEventListener('click', openLecturerModal);
+  document.getElementById('lecturerModalClose').addEventListener('click', closeLecturerModal);
+  lecturerModal.addEventListener('click', (e) => { if (e.target === lecturerModal) closeLecturerModal(); });
+
+  document.getElementById('lecturerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const entry = {
+      name: document.getElementById('lecturerName').value.trim(),
+      email: document.getElementById('lecturerEmail').value.trim(),
+      office_hours: document.getElementById('lecturerOfficeHours').value.trim(),
+      room: document.getElementById('lecturerRoom').value.trim(),
+      appointment_booked: document.getElementById('lecturerStatus').checked,
+    };
+    await addLecturer(entry);
+    closeLecturerModal();
   });
 
   /* ================================================================
@@ -834,9 +891,13 @@
     document.getElementById('adminBtnLabel').textContent = label;
     document.getElementById('adminBtnLabelMobile').textContent = label;
 
-    const addBtn = document.getElementById('addEntryBtn');
-    addBtn.classList.toggle('hidden', !state.isAdmin);
-    addBtn.classList.toggle('inline-flex', state.isAdmin);
+    const addEntryBtn = document.getElementById('addEntryBtn');
+    addEntryBtn.classList.toggle('hidden', !state.isAdmin);
+    addEntryBtn.classList.toggle('inline-flex', state.isAdmin);
+
+    const addLecturerBtn = document.getElementById('addLecturerBtn');
+    addLecturerBtn.classList.toggle('hidden', !state.isAdmin);
+    addLecturerBtn.classList.toggle('inline-flex', state.isAdmin);
   }
 
   /* ================================================================
