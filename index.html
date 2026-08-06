@@ -45,7 +45,7 @@
 <!-- Icons -->
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
-<!-- Supabase JS SDK (aktuell inaktiv, siehe Kommentar im Script-Bereich) -->
+<!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -152,7 +152,7 @@
           </h2>
           <p class="text-sm text-muted mt-1" id="todayLabel"></p>
         </div>
-        <span id="demoBadge" class="hidden sm:inline-flex text-[10px] uppercase tracking-wide text-muted border border-line rounded-full px-2.5 py-1" title="Ohne Supabase-Verbindung werden Änderungen nur im Browser-Speicher gehalten und gehen beim Neuladen verloren.">Lokale Vorschau</span>
+        <span id="connectionBadge" class="hidden sm:inline-flex text-[10px] uppercase tracking-wide text-alert border border-alert/40 rounded-full px-2.5 py-1" title="Bitte SUPABASE_URL und SUPABASE_ANON_KEY im Script-Bereich der index.html eintragen.">Supabase nicht verbunden</span>
       </div>
 
       <!-- Live / Als Nächstes (Signatur-Element) -->
@@ -255,11 +255,11 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs text-muted mb-1">Start</label>
+            <label class="block text-xs text-muted mb-1">Start (deine Ortszeit)</label>
             <input required type="datetime-local" id="entryStart" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
           <div>
-            <label class="block text-xs text-muted mb-1">Ende</label>
+            <label class="block text-xs text-muted mb-1">Ende (deine Ortszeit)</label>
             <input required type="datetime-local" id="entryEnd" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
         </div>
@@ -273,7 +273,7 @@
             <input type="text" id="entryRoom2" placeholder="B2.03" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
         </div>
-        <p class="text-xs text-muted">Tipp: Enthält der Name "Klausur", wird der Termin automatisch als Klausur markiert (rote Markierung, Countdown).</p>
+        <p class="text-xs text-muted">Tipp: Enthält der Name "Klausur", wird der Termin automatisch als Klausur markiert (rote Markierung, Countdown). Start/Ende werden hier immer in Berliner Zeit (MEZ/MESZ) angegeben und ausgewertet.</p>
         <button type="submit" class="w-full rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
       </form>
     </div>
@@ -300,11 +300,11 @@
           <input required type="email" id="lecturerEmail" placeholder="name@dhbw-example.de" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
         </div>
         <div>
-          <label class="block text-xs text-muted mb-1">Sprechzeiten</label>
-          <input required type="text" id="lecturerOfficeHours" placeholder="Mi 14:00–15:00 Uhr" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+          <label class="block text-xs text-muted mb-1">Vorlesung</label>
+          <input required type="text" id="lecturerLecture" placeholder="z. B. Softwareentwicklung II" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
         </div>
         <div>
-          <label class="block text-xs text-muted mb-1">Raum</label>
+          <label class="block text-xs text-muted mb-1">Standort</label>
           <input required type="text" id="lecturerRoom" placeholder="B2.14" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
         </div>
         <label class="flex items-center gap-2 text-sm text-ink">
@@ -328,34 +328,33 @@
   /* ================================================================
      SUPABASE — Zugangsdaten & Tabellen
      ----------------------------------------------------------------
-     Dieser Block ist aktuell INAKTIV (nur Vorbereitung für später).
-     Solange SUPABASE_URL / SUPABASE_ANON_KEY nicht gesetzt sind,
-     laufen Stundenplan und Dozenten rein lokal im Browser-Speicher
-     (siehe state.schedule / state.lecturers weiter unten).
+     Hier deine echten Zugangsdaten eintragen (Supabase-Projekt
+     → Project Settings → API). Ohne gültige Werte bleiben Stundenplan
+     und Dozenten leer und ein Hinweis-Badge erscheint oben rechts.
 
-     Erwartete Tabellen, sobald Supabase angebunden wird:
+     Tabellen:
 
-     1) "schedule"
-        - id           uuid / int8  (Primary Key)
-        - name         text          Fach / Veranstaltung
-        - startTime    timestamp     Beginn (Datum + Uhrzeit)
-        - endTime      timestamp     Ende (Datum + Uhrzeit)
-        - rooms__001   text          Hauptraum
-        - rooms__002   text          Nebenraum (optional)
+     1) "termine"
+        - id           int8         Primary Key (automatisch)
+        - name         text         Fach / Veranstaltung
+        - startTime    timestamptz  Beginn — in der DB in UTC gespeichert
+        - endTime      timestamptz  Ende — in der DB in UTC gespeichert
+        - rooms__001   text         Hauptraum
+        - rooms__002   text         Nebenraum (optional)
 
-     2) "lecturers"
-        - id                  uuid / int8  (Primary Key)
-        - name                text
-        - email               text
-        - office_hours        text   ("Sprechzeiten")
-        - room                text
-        - appointment_booked  bool   ("Sprechstunde gebucht?")
+     2) "dozenten"
+        - id      int8   Primary Key (automatisch)
+        - name    text
+        - email   text
+        - lecture text    unterrichtete Vorlesung
+        - room    text    Standort
+        - bool    bool    Ja/Nein-Status (z. B. Sprechstunde gebucht)
   ================================================================= */
   const SUPABASE_URL = 'DEINE_SUPABASE_URL';           // z. B. 'https://xxxx.supabase.co'
   const SUPABASE_ANON_KEY = 'DEIN_SUPABASE_ANON_KEY';
 
-  const SUPABASE_TABLE_SCHEDULE = 'schedule';
-  const SUPABASE_TABLE_LECTURERS = 'lecturers';
+  const SUPABASE_TABLE_TERMINE = 'termine';
+  const SUPABASE_TABLE_DOZENTEN = 'dozenten';
 
   const isSupabaseConfigured =
     SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
@@ -369,39 +368,6 @@
   ================================================================= */
   const ADMIN_PASSWORD = 'admin';
 
-  /* ================================================================
-     DATUMS-HILFSFUNKTIONEN (immer lokale Zeit, kein UTC-Versatz)
-  ================================================================= */
-  function isoDate(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-  function addDays(date, days) {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    return d;
-  }
-  function getMonday(date) {
-    const d = new Date(date);
-    const day = d.getDay(); // 0 = Sonntag
-    const diff = (day === 0 ? -6 : 1) - day;
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }
-  function startOfDay(d) {
-    const c = new Date(d);
-    c.setHours(0, 0, 0, 0);
-    return c;
-  }
-  function formatTime(dtStr) {
-    return new Date(dtStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false });
-  }
-  function formatDateDe(dtStr) {
-    return new Date(dtStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
-  }
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = String(str ?? '');
@@ -411,9 +377,119 @@
   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
 
   /* ================================================================
+     ZEITZONEN-HILFSFUNKTIONEN (WICHTIG!)
+     ----------------------------------------------------------------
+     In der Datenbank stehen startTime/endTime als timestamptz, also
+     absolute UTC-Zeitpunkte. Ein JavaScript-Date-Objekt kennt diesen
+     Zeitpunkt bereits korrekt, sobald wir new Date(utcString) aufrufen
+     — Vergleiche wie "läuft die Vorlesung gerade" funktionieren daher
+     automatisch richtig, unabhängig von der Zeitzone.
+
+     Reine ANZEIGE (Uhrzeit, Datum) muss aber explizit in Europe/Berlin
+     formatiert werden, sonst zeigt der Browser ggf. seine eigene
+     Systemzeitzone. Und beim SCHREIBEN eines neuen Termins muss die
+     eingegebene "Wanduhrzeit" (z. B. "10:00" aus dem datetime-local-
+     Feld) korrekt unter Berücksichtigung von MEZ/MESZ in einen echten
+     UTC-Zeitstempel umgerechnet werden, bevor er an Supabase geht.
+  ================================================================= */
+  const DASHBOARD_TIMEZONE = 'Europe/Berlin';
+
+  // "YYYY-MM-DD" eines Date-Objekts, ausgewertet in der angegebenen Zeitzone
+  function isoDateInTz(date, timeZone = DASHBOARD_TIMEZONE) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  }
+  // "Heute" aus Sicht von Europe/Berlin — unabhängig von der Zeitzone des Besuchers
+  function todayInBerlin() {
+    return isoDateInTz(new Date());
+  }
+
+  // Ermittelt den aktuellen UTC-Offset (in Minuten) einer IANA-Zeitzone zu einem
+  // gegebenen Zeitpunkt. Berücksichtigt MEZ/MESZ automatisch über die Intl-API.
+  function getTimeZoneOffsetMinutes(date, timeZone) {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const parts = dtf.formatToParts(date).reduce((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = p.value;
+      return acc;
+    }, {});
+    const asIfUTC = Date.UTC(
+      Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+      Number(parts.hour), Number(parts.minute)
+    );
+    return (asIfUTC - date.getTime()) / 60000;
+  }
+
+  // Wandelt eine "Wanduhrzeit" aus <input type="datetime-local"> (z. B. "2026-08-06T10:00"),
+  // die als Berliner Ortszeit gemeint ist, in einen korrekten UTC-ISO-String um.
+  function berlinWallTimeToUtcIso(localDateTimeStr) {
+    const withSeconds = localDateTimeStr.length === 16 ? localDateTimeStr + ':00' : localDateTimeStr;
+    const naiveUtc = new Date(withSeconds + 'Z'); // nur als Referenzpunkt für die Offset-Ermittlung
+    const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtc, DASHBOARD_TIMEZONE);
+    return new Date(naiveUtc.getTime() - offsetMinutes * 60000).toISOString();
+  }
+
+  // Wandelt einen UTC-ISO-String aus der Datenbank zurück in das Format, das
+  // <input type="datetime-local"> als value erwartet — angezeigt in Berliner Ortszeit.
+  function toBerlinDatetimeLocalValue(utcIsoStr) {
+    const dtf = new Intl.DateTimeFormat('en-CA', {
+      timeZone: DASHBOARD_TIMEZONE, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const parts = dtf.formatToParts(new Date(utcIsoStr)).reduce((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = p.value;
+      return acc;
+    }, {});
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+  }
+
+  function formatTime(dtStr) {
+    return new Date(dtStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: DASHBOARD_TIMEZONE });
+  }
+  function formatDateDe(dtStr) {
+    return new Date(dtStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: DASHBOARD_TIMEZONE });
+  }
+
+  /* ================================================================
+     KALENDER-TAGES-ARITHMETIK
+     ----------------------------------------------------------------
+     Reine "YYYY-MM-DD"-String-Rechnung (intern über Date.UTC), damit
+     Wochennavigation & Tagesvergleiche unabhängig von der Zeitzone
+     des Browsers immer dieselben Kalendertage treffen.
+  ================================================================= */
+  function parseIsoDateParts(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return { y, m, d };
+  }
+  function addDaysToIso(iso, days) {
+    const { y, m, d } = parseIsoDateParts(iso);
+    const dt = new Date(Date.UTC(y, m - 1, d) + days * 86400000);
+    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  }
+  function mondayOfIso(iso) {
+    const { y, m, d } = parseIsoDateParts(iso);
+    const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Sonntag
+    return addDaysToIso(iso, (day === 0 ? -6 : 1) - day);
+  }
+  function daysBetweenIso(isoA, isoB) {
+    const a = parseIsoDateParts(isoA), b = parseIsoDateParts(isoB);
+    return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86400000);
+  }
+  function formatIsoShort(iso) {
+    const [, m, d] = iso.split('-');
+    return `${d}.${m}.`;
+  }
+  function formatIsoWithYear(iso) {
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  }
+
+  /* ================================================================
      STUNDENPLAN-HILFSFUNKTIONEN
-     (Klausur-Erkennung läuft rein über den Namen — kein separates
-      "Typ"-Feld, siehe Tipp-Text im Termin-Formular)
+     (Klausur-Erkennung läuft über den Namen — kein separates "Typ"-Feld)
   ================================================================= */
   function isExamEntry(e) {
     return /klausur/i.test(e.name);
@@ -422,16 +498,15 @@
     return [e.rooms__001, e.rooms__002].filter(Boolean).join(' · ');
   }
   function entryDayIso(e) {
-    return isoDate(new Date(e.startTime));
+    return isoDateInTz(new Date(e.startTime));
   }
 
   /* ================================================================
      GLOBALER ZUSTAND
      ----------------------------------------------------------------
-     Stundenplan und Dozenten liegen (noch) ausschließlich als
-     einfache JavaScript-Arrays im Speicher — ohne Supabase-Anbindung
-     gehen Änderungen beim Neuladen der Seite verloren. Das ist für
-     diesen Zwischenschritt (Frontend-Aufbau) so gewollt.
+     state.schedule / state.lecturers sind reine Zwischenspeicher für
+     das Rendering — Quelle der Wahrheit ist immer Supabase. Nach jedem
+     Insert/Update/Delete wird die jeweilige Tabelle neu geladen.
   ================================================================= */
   const TODO_STORAGE_KEY = 'dhbw_dashboard_todos';
 
@@ -451,30 +526,26 @@
     isAdmin: false,
     weekOffset: 0,
     schedule: [],   // { id, name, startTime, endTime, rooms__001, rooms__002 }
-    lecturers: [],  // { id, name, email, office_hours, room, appointment_booked }
+    lecturers: [],  // { id, name, email, lecture, room, bool }
     todos: loadTodosFromStorage(),
   };
 
   /* ================================================================
-     DATENZUGRIFF (Supabase, falls konfiguriert — sonst lokales Array)
+     DATENZUGRIFF — echte Supabase-Anfragen
   ================================================================= */
   async function loadSchedule() {
-    if (supabaseClient) {
-      const { data, error } = await supabaseClient
-        .from(SUPABASE_TABLE_SCHEDULE).select('*').order('startTime', { ascending: true });
-      if (error) { console.error(error); return state.schedule; }
-      return data;
-    }
-    return state.schedule;
+    if (!supabaseClient) return [];
+    const { data, error } = await supabaseClient
+      .from(SUPABASE_TABLE_TERMINE).select('*').order('startTime', { ascending: true });
+    if (error) { console.error(error); alert('Stundenplan konnte nicht geladen werden: ' + error.message); return []; }
+    return data;
   }
   async function loadLecturers() {
-    if (supabaseClient) {
-      const { data, error } = await supabaseClient
-        .from(SUPABASE_TABLE_LECTURERS).select('*').order('name', { ascending: true });
-      if (error) { console.error(error); return state.lecturers; }
-      return data;
-    }
-    return state.lecturers;
+    if (!supabaseClient) return [];
+    const { data, error } = await supabaseClient
+      .from(SUPABASE_TABLE_DOZENTEN).select('*').order('name', { ascending: true });
+    if (error) { console.error(error); alert('Dozenten konnten nicht geladen werden: ' + error.message); return []; }
+    return data;
   }
   async function refreshSchedule() {
     state.schedule = await loadSchedule();
@@ -486,65 +557,41 @@
   }
 
   async function addScheduleEntry(entry) {
-    if (supabaseClient) {
-      const { error } = await supabaseClient.from(SUPABASE_TABLE_SCHEDULE).insert(entry);
-      if (error) return alert('Fehler beim Speichern: ' + error.message);
-    } else {
-      entry.id = crypto.randomUUID();
-      state.schedule.push(entry);
-    }
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert (SUPABASE_URL / SUPABASE_ANON_KEY oben im Script eintragen).');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_TERMINE).insert(entry);
+    if (error) return alert('Fehler beim Speichern: ' + error.message);
     await refreshSchedule();
   }
   async function updateScheduleEntry(id, changes) {
-    if (supabaseClient) {
-      const { error } = await supabaseClient.from(SUPABASE_TABLE_SCHEDULE).update(changes).eq('id', id);
-      if (error) return alert('Fehler beim Aktualisieren: ' + error.message);
-    } else {
-      const idx = state.schedule.findIndex(x => x.id === id);
-      if (idx > -1) state.schedule[idx] = { ...state.schedule[idx], ...changes };
-    }
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_TERMINE).update(changes).eq('id', id);
+    if (error) return alert('Fehler beim Aktualisieren: ' + error.message);
     await refreshSchedule();
   }
   async function deleteScheduleEntry(id) {
-    if (supabaseClient) {
-      const { error } = await supabaseClient.from(SUPABASE_TABLE_SCHEDULE).delete().eq('id', id);
-      if (error) return alert('Fehler beim Löschen: ' + error.message);
-    } else {
-      state.schedule = state.schedule.filter(x => x.id !== id);
-    }
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_TERMINE).delete().eq('id', id);
+    if (error) return alert('Fehler beim Löschen: ' + error.message);
     await refreshSchedule();
   }
 
   async function addLecturer(entry) {
-    if (supabaseClient) {
-      const { error } = await supabaseClient.from(SUPABASE_TABLE_LECTURERS).insert(entry);
-      if (error) return alert('Fehler beim Speichern: ' + error.message);
-    } else {
-      entry.id = crypto.randomUUID();
-      state.lecturers.push(entry);
-    }
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert (SUPABASE_URL / SUPABASE_ANON_KEY oben im Script eintragen).');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).insert(entry);
+    if (error) return alert('Fehler beim Speichern: ' + error.message);
     await refreshLecturers();
   }
   async function deleteLecturer(id) {
-    if (supabaseClient) {
-      const { error } = await supabaseClient.from(SUPABASE_TABLE_LECTURERS).delete().eq('id', id);
-      if (error) return alert('Fehler beim Löschen: ' + error.message);
-    } else {
-      state.lecturers = state.lecturers.filter(x => x.id !== id);
-    }
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).delete().eq('id', id);
+    if (error) return alert('Fehler beim Löschen: ' + error.message);
     await refreshLecturers();
   }
   async function updateLecturerStatus(id, value) {
-    if (supabaseClient) {
-      const { error } = await supabaseClient.from(SUPABASE_TABLE_LECTURERS).update({ appointment_booked: value }).eq('id', id);
-      if (error) return alert('Fehler beim Aktualisieren: ' + error.message);
-      state.lecturers = await loadLecturers();
-    } else {
-      const idx = state.lecturers.findIndex(x => x.id === id);
-      if (idx > -1) state.lecturers[idx].appointment_booked = value;
-    }
-    renderLecturers();
-    lucide.createIcons();
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).update({ bool: value }).eq('id', id);
+    if (error) return alert('Fehler beim Aktualisieren: ' + error.message);
+    await refreshLecturers();
   }
 
   /* ================================================================
@@ -552,7 +599,7 @@
   ================================================================= */
   function renderLiveCard() {
     const now = new Date();
-    const todayIso = isoDate(now);
+    const todayIso = todayInBerlin();
 
     const todaysEntries = state.schedule
       .filter(e => entryDayIso(e) === todayIso)
@@ -603,11 +650,11 @@
   ================================================================= */
   function renderExamCountdown() {
     const container = document.getElementById('examList');
-    const now = new Date();
+    const todayIso = todayInBerlin();
 
     const exams = state.schedule
       .filter(isExamEntry)
-      .filter(e => new Date(e.startTime) >= startOfDay(now))
+      .filter(e => entryDayIso(e) >= todayIso)
       .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
     if (exams.length === 0) {
@@ -616,7 +663,7 @@
     }
 
     container.innerHTML = exams.map(e => {
-      const days = Math.round((startOfDay(new Date(e.startTime)) - startOfDay(now)) / 86400000);
+      const days = daysBetweenIso(todayIso, entryDayIso(e));
       const daysLabel = days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`;
       return `
         <div class="flex items-center justify-between rounded-xl border border-line bg-surface2/60 px-4 py-3">
@@ -630,7 +677,7 @@
   }
 
   /* ================================================================
-     RENDER: To-Do-Liste (localStorage)
+     RENDER: To-Do-Liste (localStorage — bleibt unverändert lokal)
   ================================================================= */
   function renderTodos() {
     const list = document.getElementById('todoList');
@@ -699,16 +746,16 @@
   }
 
   function renderScheduleGrid() {
-    const monday = addDays(getMonday(new Date()), state.weekOffset * 7);
-    const days = [0, 1, 2, 3, 4].map(i => addDays(monday, i));
-    const todayIso = isoDate(new Date());
+    const baseMonday = mondayOfIso(todayInBerlin());
+    const monday = addDaysToIso(baseMonday, state.weekOffset * 7);
+    const days = [0, 1, 2, 3, 4].map(i => addDaysToIso(monday, i));
+    const todayIso = todayInBerlin();
 
     document.getElementById('weekRangeLabel').textContent =
-      `${days[0].toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} – ${days[4].toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+      `${formatIsoShort(days[0])} – ${formatIsoWithYear(days[4])}`;
 
     const grid = document.getElementById('scheduleGrid');
-    grid.innerHTML = days.map((day, idx) => {
-      const dayIso = isoDate(day);
+    grid.innerHTML = days.map((dayIso, idx) => {
       const isToday = dayIso === todayIso;
       const dayEntries = state.schedule
         .filter(e => entryDayIso(e) === dayIso)
@@ -718,7 +765,7 @@
         <div class="flex flex-col gap-3">
           <div class="flex items-baseline justify-between px-1">
             <p class="text-sm font-medium ${isToday ? 'text-flame' : 'text-ink'}">${WEEKDAYS[idx]}</p>
-            <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${day.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</p>
+            <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
           </div>
           <div class="space-y-2 min-h-[2rem]">
             ${dayEntries.length ? dayEntries.map(scheduleCardHtml).join('') : `<p class="text-xs text-muted px-1">–</p>`}
@@ -735,7 +782,7 @@
     const editBtn = e.target.closest('[data-edit-entry]');
     const delBtn = e.target.closest('[data-delete-entry]');
     if (editBtn) {
-      const entry = state.schedule.find(x => x.id === editBtn.dataset.editEntry);
+      const entry = state.schedule.find(x => String(x.id) === editBtn.dataset.editEntry);
       if (entry) openScheduleModal(entry);
     }
     if (delBtn) {
@@ -750,8 +797,8 @@
     document.getElementById('scheduleModalTitle').textContent = entry ? 'Termin bearbeiten' : 'Termin hinzufügen';
     document.getElementById('entryId').value = entry ? entry.id : '';
     document.getElementById('entryName').value = entry ? entry.name : '';
-    document.getElementById('entryStart').value = entry ? entry.startTime : '';
-    document.getElementById('entryEnd').value = entry ? entry.endTime : '';
+    document.getElementById('entryStart').value = entry ? toBerlinDatetimeLocalValue(entry.startTime) : '';
+    document.getElementById('entryEnd').value = entry ? toBerlinDatetimeLocalValue(entry.endTime) : '';
     document.getElementById('entryRoom1').value = entry ? entry.rooms__001 : '';
     document.getElementById('entryRoom2').value = entry && entry.rooms__002 ? entry.rooms__002 : '';
     scheduleModal.classList.remove('hidden');
@@ -767,8 +814,8 @@
     const id = document.getElementById('entryId').value;
     const entry = {
       name: document.getElementById('entryName').value.trim(),
-      startTime: document.getElementById('entryStart').value,
-      endTime: document.getElementById('entryEnd').value,
+      startTime: berlinWallTimeToUtcIso(document.getElementById('entryStart').value),
+      endTime: berlinWallTimeToUtcIso(document.getElementById('entryEnd').value),
       rooms__001: document.getElementById('entryRoom1').value.trim(),
       rooms__002: document.getElementById('entryRoom2').value.trim() || null,
     };
@@ -809,18 +856,18 @@
             <p class="text-xs text-muted flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(l.room)}</p>
           </div>
         </div>
-        <p class="text-xs text-muted flex items-center gap-1.5"><i data-lucide="clock" class="h-3.5 w-3.5"></i>${escapeHtml(l.office_hours)}</p>
+        <p class="text-xs text-muted flex items-center gap-1.5"><i data-lucide="book-open" class="h-3.5 w-3.5"></i>${escapeHtml(l.lecture)}</p>
         <a href="mailto:${encodeURIComponent(l.email)}" class="inline-flex items-center gap-1.5 text-xs text-signal hover:text-ink transition self-start">
           <i data-lucide="mail" class="h-3.5 w-3.5"></i>${escapeHtml(l.email)}
         </a>
         <div class="flex items-center justify-between pt-3 border-t border-line">
           <span class="text-xs text-muted">Sprechstunde gebucht?</span>
           ${state.isAdmin ? `
-            <button data-toggle-lecturer="${l.id}" class="relative h-6 w-11 rounded-full transition ${l.appointment_booked ? 'bg-ok' : 'bg-surface2 border border-line'}">
-              <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${l.appointment_booked ? 'left-[22px]' : 'left-0.5'}"></span>
+            <button data-toggle-lecturer="${l.id}" class="relative h-6 w-11 rounded-full transition ${l.bool ? 'bg-ok' : 'bg-surface2 border border-line'}">
+              <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${l.bool ? 'left-[22px]' : 'left-0.5'}"></span>
             </button>` : `
-            <span class="text-xs font-mono px-2.5 py-1 rounded-full ${l.appointment_booked ? 'bg-ok/15 text-ok' : 'bg-surface2 text-muted'}">
-              ${l.appointment_booked ? 'Ja' : 'Nein'}
+            <span class="text-xs font-mono px-2.5 py-1 rounded-full ${l.bool ? 'bg-ok/15 text-ok' : 'bg-surface2 text-muted'}">
+              ${l.bool ? 'Ja' : 'Nein'}
             </span>`}
         </div>
       </div>`).join('');
@@ -830,8 +877,8 @@
     const toggleBtn = e.target.closest('[data-toggle-lecturer]');
     const deleteBtn = e.target.closest('[data-delete-lecturer]');
     if (toggleBtn) {
-      const lecturer = state.lecturers.find(x => x.id === toggleBtn.dataset.toggleLecturer);
-      if (lecturer) updateLecturerStatus(lecturer.id, !lecturer.appointment_booked);
+      const lecturer = state.lecturers.find(x => String(x.id) === toggleBtn.dataset.toggleLecturer);
+      if (lecturer) updateLecturerStatus(lecturer.id, !lecturer.bool);
     }
     if (deleteBtn) {
       if (confirm('Diesen Dozenten wirklich löschen?')) deleteLecturer(deleteBtn.dataset.deleteLecturer);
@@ -856,9 +903,9 @@
     const entry = {
       name: document.getElementById('lecturerName').value.trim(),
       email: document.getElementById('lecturerEmail').value.trim(),
-      office_hours: document.getElementById('lecturerOfficeHours').value.trim(),
+      lecture: document.getElementById('lecturerLecture').value.trim(),
       room: document.getElementById('lecturerRoom').value.trim(),
-      appointment_booked: document.getElementById('lecturerStatus').checked,
+      bool: document.getElementById('lecturerStatus').checked,
     };
     await addLecturer(entry);
     closeLecturerModal();
@@ -944,13 +991,11 @@
     document.getElementById('mobileTitle').textContent = CONFIG.dashboardTitle;
     document.getElementById('sidebarCourse').textContent = CONFIG.courseName;
     document.getElementById('todayLabel').textContent =
-      new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-    document.getElementById('demoBadge').classList.toggle('hidden', isSupabaseConfigured);
+      new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: DASHBOARD_TIMEZONE });
+    document.getElementById('connectionBadge').classList.toggle('hidden', isSupabaseConfigured);
 
-    if (supabaseClient) {
-      state.schedule = await loadSchedule();
-      state.lecturers = await loadLecturers();
-    }
+    state.schedule = await loadSchedule();
+    state.lecturers = await loadLecturers();
 
     updateAdminUI();
     renderAll();
