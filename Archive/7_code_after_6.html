@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Campus Dashboard</title>
+
+<!-- Tailwind CSS (Play CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          canvas:  '#0A0B0F', // Seitenhintergrund
+          surface: '#13151B', // Karten
+          surface2:'#191C24', // Eingaben / Hover-Flächen
+          line:    '#242833', // Rahmen
+          ink:     '#EDEBE8', // Haupttext
+          muted:   '#98A0AC', // Sekundärtext
+          flame:   '#F2A93B', // Signaturfarbe: "live" / Primäraktionen
+          signal:  '#4CC9DE', // Vorlesung / Links
+          alert:   '#F2556B', // Klausur / Löschen
+          ok:      '#3ED598', // Status "Ja" / Erfolg
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          body: ['"Inter"', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.55)',
+        },
+      },
+    },
+  };
+</script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  section[id] { scroll-margin-top: 5.5rem; }
+  body { font-feature-settings: "ss01"; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #242833; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #323847; }
+
+  /* Native Datum/Zeit-Picker-Icons für Dark Mode aufhellen */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.75);
+    cursor: pointer;
+  }
+
+  .nav-link {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .6rem .75rem; border-radius: .65rem;
+    font-size: .875rem; color: #98A0AC;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .nav-link:hover, .nav-link.nav-active { background: #191C24; color: #EDEBE8; }
+</style>
+</head>
+
+<body class="bg-canvas text-ink font-body antialiased">
+
+  <!-- ============================================================
+       MOBILE TOP BAR (nur < md)
+  ============================================================= -->
+  <header class="md:hidden sticky top-0 z-30 flex items-center justify-between bg-surface/95 backdrop-blur border-b border-line px-4 py-3">
+    <div class="flex items-center gap-2">
+      <div class="h-8 w-8 rounded-lg bg-flame/15 flex items-center justify-center">
+        <i data-lucide="graduation-cap" class="h-4 w-4 text-flame"></i>
+      </div>
+      <span class="font-display font-semibold text-sm text-ink" id="mobileTitle">Campus Dashboard</span>
+    </div>
+    <button id="mobileMenuBtn" class="p-2 rounded-lg hover:bg-surface2 text-ink transition" aria-label="Menü öffnen">
+      <i data-lucide="menu" class="h-5 w-5"></i>
+    </button>
+  </header>
+
+  <!-- Mobiles Ausklapp-Menü (Burger-Menü) -->
+  <nav id="mobileMenu" class="hidden md:hidden bg-surface border-b border-line px-4 py-3 space-y-1 sticky top-[57px] z-30">
+    <a href="#overview" data-section="overview" class="nav-link"><i data-lucide="layout-dashboard" class="h-4 w-4"></i>Übersicht</a>
+    <a href="#schedule" data-section="schedule" class="nav-link"><i data-lucide="calendar-days" class="h-4 w-4"></i>Stundenplan</a>
+    <a href="#lecturers" data-section="lecturers" class="nav-link"><i data-lucide="users" class="h-4 w-4"></i>Dozenten & Kontakte</a>
+    <div class="pt-2 mt-2 border-t border-line">
+      <button id="adminToggleBtnMobile" class="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface2 hover:text-ink transition">
+        <i data-lucide="lock" class="h-4 w-4"></i>
+        <span id="adminBtnLabelMobile">Admin-Zugang</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+       DESKTOP SIDEBAR (>= md)
+  ============================================================= -->
+  <aside class="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-surface border-r border-line px-4 py-6">
+    <div class="flex items-center gap-2.5 px-2 mb-8">
+      <div class="h-9 w-9 rounded-lg bg-flame/15 flex items-center justify-center shrink-0">
+        <i data-lucide="graduation-cap" class="h-5 w-5 text-flame"></i>
+      </div>
+      <div class="leading-tight">
+        <p class="font-display font-semibold text-ink text-sm" id="sidebarTitle">Campus Dashboard</p>
+        <p class="text-xs text-muted" id="sidebarCourse">Kurs</p>
+      </div>
+    </div>
+
+    <nav class="flex-1 space-y-1">
+      <a href="#overview" data-section="overview" class="nav-link"><i data-lucide="layout-dashboard" class="h-4 w-4"></i>Übersicht</a>
+      <a href="#schedule" data-section="schedule" class="nav-link"><i data-lucide="calendar-days" class="h-4 w-4"></i>Stundenplan</a>
+      <a href="#lecturers" data-section="lecturers" class="nav-link"><i data-lucide="users" class="h-4 w-4"></i>Dozenten & Kontakte</a>
+    </nav>
+
+    <div class="pt-4 border-t border-line">
+      <div id="adminStatusBadge" class="hidden mb-3 items-center gap-2 rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">
+        <i data-lucide="shield-check" class="h-4 w-4"></i> Admin-Modus aktiv
+      </div>
+      <button id="adminToggleBtn" class="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface2 hover:text-ink transition">
+        <i data-lucide="lock" class="h-4 w-4"></i>
+        <span id="adminBtnLabel">Admin-Zugang</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       HAUPTINHALT
+  ============================================================= -->
+  <main class="md:ml-64 px-4 sm:px-6 md:px-10 py-8 md:py-12 max-w-5xl mx-auto space-y-16">
+
+    <!-- ---------- A) ÜBERSICHT ---------- -->
+    <section id="overview">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="font-display text-2xl text-ink font-semibold flex items-center gap-2">
+            <i data-lucide="layout-dashboard" class="h-5 w-5 text-flame"></i>
+            Übersicht
+          </h2>
+          <p class="text-sm text-muted mt-1" id="todayLabel"></p>
+        </div>
+        <span id="connectionBadge" class="hidden sm:inline-flex text-[10px] uppercase tracking-wide text-alert border border-alert/40 rounded-full px-2.5 py-1" title="Bitte SUPABASE_URL und SUPABASE_ANON_KEY im Script-Bereich der index.html eintragen.">Supabase nicht verbunden</span>
+      </div>
+
+      <!-- Live / Als Nächstes (Signatur-Element) -->
+      <div class="rounded-2xl bg-surface border border-line shadow-card p-6 md:p-8 mb-6">
+        <div class="flex items-center gap-2 mb-5">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-flame opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-flame"></span>
+          </span>
+          <span id="liveLabel" class="font-mono text-xs tracking-widest uppercase text-flame">Live</span>
+        </div>
+        <div id="liveContent"></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Klausuren-Countdown -->
+        <div class="rounded-2xl bg-surface border border-line shadow-card p-6">
+          <h3 class="font-display text-base text-ink font-semibold flex items-center gap-2">
+            <i data-lucide="alarm-clock" class="h-4 w-4 text-alert"></i>
+            Klausuren-Countdown
+          </h3>
+          <div id="examList" class="space-y-2 mt-4"></div>
+        </div>
+
+        <!-- To-Do -->
+        <div class="rounded-2xl bg-surface border border-line shadow-card p-6">
+          <h3 class="font-display text-base text-ink font-semibold flex items-center gap-2">
+            <i data-lucide="list-checks" class="h-4 w-4 text-signal"></i>
+            To-Do
+          </h3>
+          <form id="todoForm" class="flex gap-2 mt-4">
+            <input id="todoInput" type="text" placeholder="Neue Aufgabe…" autocomplete="off"
+              class="flex-1 rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+            <button type="submit" class="rounded-lg bg-flame text-canvas px-3 flex items-center justify-center hover:bg-flame/90 transition" aria-label="Aufgabe hinzufügen">
+              <i data-lucide="plus" class="h-4 w-4"></i>
+            </button>
+          </form>
+          <ul id="todoList" class="space-y-2 mt-4 max-h-56 overflow-y-auto pr-1"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- B) STUNDENPLAN ---------- -->
+    <section id="schedule">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h2 class="font-display text-2xl text-ink font-semibold flex items-center gap-2">
+          <i data-lucide="calendar-days" class="h-5 w-5 text-flame"></i>
+          Stundenplan
+        </h2>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1 rounded-lg border border-line bg-surface p-1">
+            <button id="prevWeekBtn" class="p-1.5 rounded-md hover:bg-surface2 text-muted hover:text-ink transition" aria-label="Vorherige Woche">
+              <i data-lucide="chevron-left" class="h-4 w-4"></i>
+            </button>
+            <span id="weekRangeLabel" class="px-2 text-xs font-mono text-ink min-w-[9rem] text-center"></span>
+            <button id="nextWeekBtn" class="p-1.5 rounded-md hover:bg-surface2 text-muted hover:text-ink transition" aria-label="Nächste Woche">
+              <i data-lucide="chevron-right" class="h-4 w-4"></i>
+            </button>
+          </div>
+          <button id="addEntryBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
+            <i data-lucide="plus" class="h-4 w-4"></i> Termin
+          </button>
+        </div>
+      </div>
+      <div id="scheduleGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+    </section>
+
+    <!-- ---------- C) DOZENTEN & KONTAKTE ---------- -->
+    <section id="lecturers">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h2 class="font-display text-2xl text-ink font-semibold flex items-center gap-2">
+          <i data-lucide="users" class="h-5 w-5 text-flame"></i>
+          Dozenten & Kontakte
+        </h2>
+        <button id="addLecturerBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
+          <i data-lucide="plus" class="h-4 w-4"></i> Dozent
+        </button>
+      </div>
+      <div id="lecturersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       MODAL: Termin hinzufügen / bearbeiten (nur Admin)
+  ============================================================= -->
+  <div id="scheduleModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-2xl bg-surface border border-line shadow-card p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="scheduleModalTitle" class="font-display text-lg text-ink font-semibold">Termin hinzufügen</h3>
+        <button id="scheduleModalClose" class="text-muted hover:text-ink transition" aria-label="Schließen">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <form id="scheduleForm" class="space-y-4">
+        <input type="hidden" id="entryId">
+        <div>
+          <label class="block text-xs text-muted mb-1">Fach / Veranstaltung</label>
+          <input required type="text" id="entryName" placeholder="z. B. Softwareentwicklung II" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-muted mb-1">Start (deine Ortszeit)</label>
+            <input required type="datetime-local" id="entryStart" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1">Ende (deine Ortszeit)</label>
+            <input required type="datetime-local" id="entryEnd" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-flame/50">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-muted mb-1">Hauptraum</label>
+            <input required type="text" id="entryRoom1" placeholder="A1.12" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1">Nebenraum (optional)</label>
+            <input type="text" id="entryRoom2" placeholder="B2.03" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+          </div>
+        </div>
+        <p class="text-xs text-muted">Tipp: Enthält der Name "Klausur", wird der Termin automatisch als Klausur markiert (rote Markierung, Countdown). Start/Ende werden hier immer in Berliner Zeit (MEZ/MESZ) angegeben und ausgewertet.</p>
+        <button type="submit" class="w-full rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODAL: Dozent hinzufügen (nur Admin)
+  ============================================================= -->
+  <div id="lecturerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-2xl bg-surface border border-line shadow-card p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-display text-lg text-ink font-semibold">Dozent hinzufügen</h3>
+        <button id="lecturerModalClose" class="text-muted hover:text-ink transition" aria-label="Schließen">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <form id="lecturerForm" class="space-y-4">
+        <div>
+          <label class="block text-xs text-muted mb-1">Name</label>
+          <input required type="text" id="lecturerName" placeholder="Prof. Dr. Nachname" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">E-Mail</label>
+          <input required type="email" id="lecturerEmail" placeholder="name@dhbw-example.de" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">Vorlesung</label>
+          <input required type="text" id="lecturerLecture" placeholder="z. B. Softwareentwicklung II" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">Standort</label>
+          <input required type="text" id="lecturerRoom" placeholder="B2.14" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <label class="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" id="lecturerStatus" class="h-4 w-4 rounded border-line bg-surface2 accent-flame">
+          Sprechstunde bereits gebucht?
+        </label>
+        <button type="submit" class="w-full rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  /* ================================================================
+     KONFIGURATION — hier Kursname etc. anpassen
+  ================================================================= */
+  const CONFIG = {
+    dashboardTitle: 'Campus Dashboard',
+    courseName: 'Mein Kurs', // TODO: eigenen Kurs eintragen
+  };
+
+  /* ================================================================
+     SUPABASE — Zugangsdaten & Tabellen
+     ----------------------------------------------------------------
+     Hier deine echten Zugangsdaten eintragen (Supabase-Projekt
+     → Project Settings → API). Ohne gültige Werte bleiben Stundenplan
+     und Dozenten leer und ein Hinweis-Badge erscheint oben rechts.
+
+     Tabellen:
+
+     1) "termine"
+        - id           int8         Primary Key (automatisch)
+        - name         text         Fach / Veranstaltung
+        - startTime    timestamptz  Beginn — in der DB in UTC gespeichert
+        - endTime      timestamptz  Ende — in der DB in UTC gespeichert
+        - rooms__001   text         Hauptraum
+        - rooms__002   text         Nebenraum (optional)
+
+     2) "dozenten"
+        - id      int8   Primary Key (automatisch)
+        - name    text
+        - email   text
+        - lecture text    unterrichtete Vorlesung
+        - room    text    Standort
+        - bool    bool    Ja/Nein-Status (z. B. Sprechstunde gebucht)
+  ================================================================= */
+  const SUPABASE_URL = 'DEINE_SUPABASE_URL';           // z. B. 'https://xxxx.supabase.co'
+  const SUPABASE_ANON_KEY = 'DEIN_SUPABASE_ANON_KEY';
+
+  const SUPABASE_TABLE_TERMINE = 'termine';
+  const SUPABASE_TABLE_DOZENTEN = 'dozenten';
+
+  const isSupabaseConfigured =
+    SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
+
+  const supabaseClient = isSupabaseConfigured
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  /* ================================================================
+     ADMIN-PASSWORT (nur clientseitig — siehe Hinweis im Chat!)
+  ================================================================= */
+  const ADMIN_PASSWORD = 'admin';
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+  }
+
+  const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
+
+  /* ================================================================
+     ZEITZONEN-HILFSFUNKTIONEN (WICHTIG!)
+     ----------------------------------------------------------------
+     In der Datenbank stehen startTime/endTime als timestamptz, also
+     absolute UTC-Zeitpunkte. Ein JavaScript-Date-Objekt kennt diesen
+     Zeitpunkt bereits korrekt, sobald wir new Date(utcString) aufrufen
+     — Vergleiche wie "läuft die Vorlesung gerade" funktionieren daher
+     automatisch richtig, unabhängig von der Zeitzone.
+
+     Reine ANZEIGE (Uhrzeit, Datum) muss aber explizit in Europe/Berlin
+     formatiert werden, sonst zeigt der Browser ggf. seine eigene
+     Systemzeitzone. Und beim SCHREIBEN eines neuen Termins muss die
+     eingegebene "Wanduhrzeit" (z. B. "10:00" aus dem datetime-local-
+     Feld) korrekt unter Berücksichtigung von MEZ/MESZ in einen echten
+     UTC-Zeitstempel umgerechnet werden, bevor er an Supabase geht.
+  ================================================================= */
+  const DASHBOARD_TIMEZONE = 'Europe/Berlin';
+
+  // "YYYY-MM-DD" eines Date-Objekts, ausgewertet in der angegebenen Zeitzone
+  function isoDateInTz(date, timeZone = DASHBOARD_TIMEZONE) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  }
+  // "Heute" aus Sicht von Europe/Berlin — unabhängig von der Zeitzone des Besuchers
+  function todayInBerlin() {
+    return isoDateInTz(new Date());
+  }
+
+  // Ermittelt den aktuellen UTC-Offset (in Minuten) einer IANA-Zeitzone zu einem
+  // gegebenen Zeitpunkt. Berücksichtigt MEZ/MESZ automatisch über die Intl-API.
+  function getTimeZoneOffsetMinutes(date, timeZone) {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const parts = dtf.formatToParts(date).reduce((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = p.value;
+      return acc;
+    }, {});
+    const asIfUTC = Date.UTC(
+      Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+      Number(parts.hour), Number(parts.minute)
+    );
+    return (asIfUTC - date.getTime()) / 60000;
+  }
+
+  // Wandelt eine "Wanduhrzeit" aus <input type="datetime-local"> (z. B. "2026-08-06T10:00"),
+  // die als Berliner Ortszeit gemeint ist, in einen korrekten UTC-ISO-String um.
+  function berlinWallTimeToUtcIso(localDateTimeStr) {
+    const withSeconds = localDateTimeStr.length === 16 ? localDateTimeStr + ':00' : localDateTimeStr;
+    const naiveUtc = new Date(withSeconds + 'Z'); // nur als Referenzpunkt für die Offset-Ermittlung
+    const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtc, DASHBOARD_TIMEZONE);
+    return new Date(naiveUtc.getTime() - offsetMinutes * 60000).toISOString();
+  }
+
+  // Wandelt einen UTC-ISO-String aus der Datenbank zurück in das Format, das
+  // <input type="datetime-local"> als value erwartet — angezeigt in Berliner Ortszeit.
+  function toBerlinDatetimeLocalValue(utcIsoStr) {
+    const dtf = new Intl.DateTimeFormat('en-CA', {
+      timeZone: DASHBOARD_TIMEZONE, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const parts = dtf.formatToParts(new Date(utcIsoStr)).reduce((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = p.value;
+      return acc;
+    }, {});
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+  }
+
+  function formatTime(dtStr) {
+    return new Date(dtStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: DASHBOARD_TIMEZONE });
+  }
+  function formatDateDe(dtStr) {
+    return new Date(dtStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: DASHBOARD_TIMEZONE });
+  }
+
+  /* ================================================================
+     KALENDER-TAGES-ARITHMETIK
+     ----------------------------------------------------------------
+     Reine "YYYY-MM-DD"-String-Rechnung (intern über Date.UTC), damit
+     Wochennavigation & Tagesvergleiche unabhängig von der Zeitzone
+     des Browsers immer dieselben Kalendertage treffen.
+  ================================================================= */
+  function parseIsoDateParts(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return { y, m, d };
+  }
+  function addDaysToIso(iso, days) {
+    const { y, m, d } = parseIsoDateParts(iso);
+    const dt = new Date(Date.UTC(y, m - 1, d) + days * 86400000);
+    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  }
+  function mondayOfIso(iso) {
+    const { y, m, d } = parseIsoDateParts(iso);
+    const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Sonntag
+    return addDaysToIso(iso, (day === 0 ? -6 : 1) - day);
+  }
+  function daysBetweenIso(isoA, isoB) {
+    const a = parseIsoDateParts(isoA), b = parseIsoDateParts(isoB);
+    return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86400000);
+  }
+  function formatIsoShort(iso) {
+    const [, m, d] = iso.split('-');
+    return `${d}.${m}.`;
+  }
+  function formatIsoWithYear(iso) {
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  }
+
+  /* ================================================================
+     STUNDENPLAN-HILFSFUNKTIONEN
+     (Klausur-Erkennung läuft über den Namen — kein separates "Typ"-Feld)
+  ================================================================= */
+  function isExamEntry(e) {
+    return /klausur/i.test(e.name);
+  }
+  function formatRooms(e) {
+    return [e.rooms__001, e.rooms__002].filter(Boolean).join(' · ');
+  }
+  function entryDayIso(e) {
+    return isoDateInTz(new Date(e.startTime));
+  }
+
+  /* ================================================================
+     GLOBALER ZUSTAND
+     ----------------------------------------------------------------
+     state.schedule / state.lecturers sind reine Zwischenspeicher für
+     das Rendering — Quelle der Wahrheit ist immer Supabase. Nach jedem
+     Insert/Update/Delete wird die jeweilige Tabelle neu geladen.
+  ================================================================= */
+  const TODO_STORAGE_KEY = 'dhbw_dashboard_todos';
+
+  function loadTodosFromStorage() {
+    try {
+      const raw = localStorage.getItem(TODO_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+  function saveTodosToStorage() {
+    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(state.todos));
+  }
+
+  const state = {
+    isAdmin: false,
+    weekOffset: 0,
+    schedule: [],   // { id, name, startTime, endTime, rooms__001, rooms__002 }
+    lecturers: [],  // { id, name, email, lecture, room, bool }
+    todos: loadTodosFromStorage(),
+  };
+
+  /* ================================================================
+     DATENZUGRIFF — echte Supabase-Anfragen
+  ================================================================= */
+  async function loadSchedule() {
+    if (!supabaseClient) return [];
+    const { data, error } = await supabaseClient
+      .from(SUPABASE_TABLE_TERMINE).select('*').order('startTime', { ascending: true });
+    if (error) { console.error(error); alert('Stundenplan konnte nicht geladen werden: ' + error.message); return []; }
+    return data;
+  }
+  async function loadLecturers() {
+    if (!supabaseClient) return [];
+    const { data, error } = await supabaseClient
+      .from(SUPABASE_TABLE_DOZENTEN).select('*').order('name', { ascending: true });
+    if (error) { console.error(error); alert('Dozenten konnten nicht geladen werden: ' + error.message); return []; }
+    return data;
+  }
+  async function refreshSchedule() {
+    state.schedule = await loadSchedule();
+    renderAll();
+  }
+  async function refreshLecturers() {
+    state.lecturers = await loadLecturers();
+    renderAll();
+  }
+
+  async function addScheduleEntry(entry) {
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert (SUPABASE_URL / SUPABASE_ANON_KEY oben im Script eintragen).');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_TERMINE).insert(entry);
+    if (error) return alert('Fehler beim Speichern: ' + error.message);
+    await refreshSchedule();
+  }
+  async function updateScheduleEntry(id, changes) {
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_TERMINE).update(changes).eq('id', id);
+    if (error) return alert('Fehler beim Aktualisieren: ' + error.message);
+    await refreshSchedule();
+  }
+  async function deleteScheduleEntry(id) {
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_TERMINE).delete().eq('id', id);
+    if (error) return alert('Fehler beim Löschen: ' + error.message);
+    await refreshSchedule();
+  }
+
+  async function addLecturer(entry) {
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert (SUPABASE_URL / SUPABASE_ANON_KEY oben im Script eintragen).');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).insert(entry);
+    if (error) return alert('Fehler beim Speichern: ' + error.message);
+    await refreshLecturers();
+  }
+  async function deleteLecturer(id) {
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).delete().eq('id', id);
+    if (error) return alert('Fehler beim Löschen: ' + error.message);
+    await refreshLecturers();
+  }
+  async function updateLecturerStatus(id, value) {
+    if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).update({ bool: value }).eq('id', id);
+    if (error) return alert('Fehler beim Aktualisieren: ' + error.message);
+    await refreshLecturers();
+  }
+
+  /* ================================================================
+     RENDER: Live / Als Nächstes
+  ================================================================= */
+  function renderLiveCard() {
+    const now = new Date();
+    const todayIso = todayInBerlin();
+
+    const todaysEntries = state.schedule
+      .filter(e => entryDayIso(e) === todayIso)
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+    const current = todaysEntries.find(e => now >= new Date(e.startTime) && now < new Date(e.endTime));
+    const next = todaysEntries.find(e => new Date(e.startTime) > now);
+
+    const label = document.getElementById('liveLabel');
+    const content = document.getElementById('liveContent');
+
+    if (current) {
+      const start = new Date(current.startTime), end = new Date(current.endTime);
+      const progress = Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
+      label.textContent = 'Läuft gerade';
+      content.innerHTML = `
+        <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-3">${escapeHtml(current.name)}</h3>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted mb-5">
+          <span class="flex items-center gap-1.5"><i data-lucide="clock" class="h-4 w-4"></i>${formatTime(current.startTime)} – ${formatTime(current.endTime)} Uhr</span>
+          <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i>${escapeHtml(formatRooms(current))}</span>
+        </div>
+        <div class="h-1.5 w-full rounded-full bg-surface2 overflow-hidden">
+          <div class="h-full rounded-full bg-flame transition-all duration-500" style="width:${progress}%"></div>
+        </div>
+        <p class="mt-2 text-xs font-mono text-muted">endet um ${formatTime(current.endTime)} Uhr</p>`;
+    } else if (next) {
+      const diffMin = Math.round((new Date(next.startTime) - now) / 60000);
+      const hrs = Math.floor(diffMin / 60), mins = diffMin % 60;
+      label.textContent = 'Als Nächstes';
+      content.innerHTML = `
+        <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-3">${escapeHtml(next.name)}</h3>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
+          <span class="flex items-center gap-1.5"><i data-lucide="clock" class="h-4 w-4"></i>${formatTime(next.startTime)} – ${formatTime(next.endTime)} Uhr</span>
+          <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="h-4 w-4"></i>${escapeHtml(formatRooms(next))}</span>
+        </div>
+        <p class="mt-4 font-mono text-sm text-flame">in ${hrs > 0 ? hrs + ' Std ' : ''}${mins} Min</p>`;
+    } else {
+      label.textContent = 'Pause';
+      content.innerHTML = `
+        <h3 class="font-display text-2xl md:text-3xl text-ink font-semibold mb-2">Heute keine weiteren Termine</h3>
+        <p class="text-sm text-muted">${state.schedule.length === 0 ? 'Noch keine Termine im Stundenplan hinterlegt.' : 'Genieß die freie Zeit ☕'}</p>`;
+    }
+    lucide.createIcons();
+  }
+
+  /* ================================================================
+     RENDER: Klausuren-Countdown
+  ================================================================= */
+  function renderExamCountdown() {
+    const container = document.getElementById('examList');
+    const todayIso = todayInBerlin();
+
+    const exams = state.schedule
+      .filter(isExamEntry)
+      .filter(e => entryDayIso(e) >= todayIso)
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+    if (exams.length === 0) {
+      container.innerHTML = `<p class="text-sm text-muted">Aktuell keine anstehenden Klausuren.</p>`;
+      return;
+    }
+
+    container.innerHTML = exams.map(e => {
+      const days = daysBetweenIso(todayIso, entryDayIso(e));
+      const daysLabel = days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`;
+      return `
+        <div class="flex items-center justify-between rounded-xl border border-line bg-surface2/60 px-4 py-3">
+          <div>
+            <p class="text-sm text-ink font-medium">${escapeHtml(e.name)}</p>
+            <p class="text-xs text-muted font-mono">${formatDateDe(e.startTime)}</p>
+          </div>
+          <span class="shrink-0 rounded-full bg-alert/15 text-alert text-xs font-mono px-3 py-1">${daysLabel}</span>
+        </div>`;
+    }).join('');
+  }
+
+  /* ================================================================
+     RENDER: To-Do-Liste (localStorage — bleibt unverändert lokal)
+  ================================================================= */
+  function renderTodos() {
+    const list = document.getElementById('todoList');
+    if (state.todos.length === 0) {
+      list.innerHTML = `<p class="text-sm text-muted py-2">Noch keine Einträge – leg direkt los.</p>`;
+      return;
+    }
+    list.innerHTML = state.todos.map(t => `
+      <li class="flex items-center gap-3 group">
+        <button data-todo-toggle="${t.id}" class="shrink-0 h-5 w-5 rounded-md border flex items-center justify-center transition ${t.done ? 'bg-ok border-ok' : 'border-line'}">
+          ${t.done ? '<i data-lucide="check" class="h-3.5 w-3.5 text-canvas"></i>' : ''}
+        </button>
+        <span class="flex-1 text-sm ${t.done ? 'text-muted line-through' : 'text-ink'}">${escapeHtml(t.text)}</span>
+        <button data-todo-delete="${t.id}" class="opacity-0 group-hover:opacity-100 text-muted hover:text-alert transition" aria-label="Löschen">
+          <i data-lucide="x" class="h-4 w-4"></i>
+        </button>
+      </li>`).join('');
+  }
+
+  document.getElementById('todoForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('todoInput');
+    const text = input.value.trim();
+    if (!text) return;
+    state.todos.push({ id: crypto.randomUUID(), text, done: false });
+    saveTodosToStorage();
+    input.value = '';
+    renderTodos();
+    lucide.createIcons();
+  });
+
+  document.getElementById('todoList').addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('[data-todo-toggle]');
+    const deleteBtn = e.target.closest('[data-todo-delete]');
+    if (toggleBtn) {
+      const todo = state.todos.find(t => t.id === toggleBtn.dataset.todoToggle);
+      if (todo) todo.done = !todo.done;
+      saveTodosToStorage();
+      renderTodos();
+      lucide.createIcons();
+    }
+    if (deleteBtn) {
+      state.todos = state.todos.filter(t => t.id !== deleteBtn.dataset.todoDelete);
+      saveTodosToStorage();
+      renderTodos();
+      lucide.createIcons();
+    }
+  });
+
+  /* ================================================================
+     RENDER: Stundenplan (Wochenkalender)
+  ================================================================= */
+  function scheduleCardHtml(e) {
+    const accentClass = isExamEntry(e) ? 'border-l-alert' : 'border-l-signal';
+    return `
+      <div class="group relative rounded-xl border border-line border-l-4 ${accentClass} bg-surface p-3 shadow-card">
+        <p class="text-xs font-mono text-muted">${formatTime(e.startTime)} – ${formatTime(e.endTime)}</p>
+        <p class="text-sm font-medium text-ink mt-0.5">${escapeHtml(e.name)}</p>
+        <p class="text-xs text-muted mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(formatRooms(e))}</p>
+        ${state.isAdmin ? `
+          <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
+            <button data-edit-entry="${e.id}" class="p-1 rounded-md bg-surface2 hover:bg-line text-muted hover:text-ink transition"><i data-lucide="pencil" class="h-3 w-3"></i></button>
+            <button data-delete-entry="${e.id}" class="p-1 rounded-md bg-surface2 hover:bg-line text-muted hover:text-alert transition"><i data-lucide="trash-2" class="h-3 w-3"></i></button>
+          </div>` : ''}
+      </div>`;
+  }
+
+  function renderScheduleGrid() {
+    const baseMonday = mondayOfIso(todayInBerlin());
+    const monday = addDaysToIso(baseMonday, state.weekOffset * 7);
+    const days = [0, 1, 2, 3, 4].map(i => addDaysToIso(monday, i));
+    const todayIso = todayInBerlin();
+
+    document.getElementById('weekRangeLabel').textContent =
+      `${formatIsoShort(days[0])} – ${formatIsoWithYear(days[4])}`;
+
+    const grid = document.getElementById('scheduleGrid');
+    grid.innerHTML = days.map((dayIso, idx) => {
+      const isToday = dayIso === todayIso;
+      const dayEntries = state.schedule
+        .filter(e => entryDayIso(e) === dayIso)
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+      return `
+        <div class="flex flex-col gap-3">
+          <div class="flex items-baseline justify-between px-1">
+            <p class="text-sm font-medium ${isToday ? 'text-flame' : 'text-ink'}">${WEEKDAYS[idx]}</p>
+            <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
+          </div>
+          <div class="space-y-2 min-h-[2rem]">
+            ${dayEntries.length ? dayEntries.map(scheduleCardHtml).join('') : `<p class="text-xs text-muted px-1">–</p>`}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  document.getElementById('prevWeekBtn').addEventListener('click', () => { state.weekOffset--; renderScheduleGrid(); lucide.createIcons(); });
+  document.getElementById('nextWeekBtn').addEventListener('click', () => { state.weekOffset++; renderScheduleGrid(); lucide.createIcons(); });
+
+  // Klick-Delegation für dynamisch erzeugte Bearbeiten-/Löschen-Buttons
+  document.getElementById('scheduleGrid').addEventListener('click', (e) => {
+    const editBtn = e.target.closest('[data-edit-entry]');
+    const delBtn = e.target.closest('[data-delete-entry]');
+    if (editBtn) {
+      const entry = state.schedule.find(x => String(x.id) === editBtn.dataset.editEntry);
+      if (entry) openScheduleModal(entry);
+    }
+    if (delBtn) {
+      if (confirm('Diesen Termin wirklich löschen?')) deleteScheduleEntry(delBtn.dataset.deleteEntry);
+    }
+  });
+
+  /* ---------------- Admin-Modal: Termin hinzufügen / bearbeiten ---------------- */
+  const scheduleModal = document.getElementById('scheduleModal');
+
+  function openScheduleModal(entry = null) {
+    document.getElementById('scheduleModalTitle').textContent = entry ? 'Termin bearbeiten' : 'Termin hinzufügen';
+    document.getElementById('entryId').value = entry ? entry.id : '';
+    document.getElementById('entryName').value = entry ? entry.name : '';
+    document.getElementById('entryStart').value = entry ? toBerlinDatetimeLocalValue(entry.startTime) : '';
+    document.getElementById('entryEnd').value = entry ? toBerlinDatetimeLocalValue(entry.endTime) : '';
+    document.getElementById('entryRoom1').value = entry ? entry.rooms__001 : '';
+    document.getElementById('entryRoom2').value = entry && entry.rooms__002 ? entry.rooms__002 : '';
+    scheduleModal.classList.remove('hidden');
+  }
+  function closeScheduleModal() { scheduleModal.classList.add('hidden'); }
+
+  document.getElementById('addEntryBtn').addEventListener('click', () => openScheduleModal());
+  document.getElementById('scheduleModalClose').addEventListener('click', closeScheduleModal);
+  scheduleModal.addEventListener('click', (e) => { if (e.target === scheduleModal) closeScheduleModal(); });
+
+  document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('entryId').value;
+    const entry = {
+      name: document.getElementById('entryName').value.trim(),
+      startTime: berlinWallTimeToUtcIso(document.getElementById('entryStart').value),
+      endTime: berlinWallTimeToUtcIso(document.getElementById('entryEnd').value),
+      rooms__001: document.getElementById('entryRoom1').value.trim(),
+      rooms__002: document.getElementById('entryRoom2').value.trim() || null,
+    };
+    if (id) await updateScheduleEntry(id, entry);
+    else await addScheduleEntry(entry);
+    closeScheduleModal();
+  });
+
+  /* ================================================================
+     RENDER: Dozenten & Kontakte
+  ================================================================= */
+  function initials(name) {
+    const clean = name.replace(/Prof\.|Dr\./g, '').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    return parts.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  function renderLecturers() {
+    const grid = document.getElementById('lecturersGrid');
+
+    if (state.lecturers.length === 0) {
+      grid.innerHTML = `<p class="text-sm text-muted">Noch keine Dozenten hinterlegt.${state.isAdmin ? ' Leg über "+ Dozent" den ersten Eintrag an.' : ''}</p>`;
+      return;
+    }
+
+    grid.innerHTML = state.lecturers.map(l => `
+      <div class="group relative rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col gap-4">
+        ${state.isAdmin ? `
+          <button data-delete-lecturer="${l.id}" class="absolute top-3 right-3 hidden group-hover:flex p-1.5 rounded-md bg-surface2 hover:bg-line text-muted hover:text-alert transition" aria-label="Dozent löschen">
+            <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+          </button>` : ''}
+        <div class="flex items-center gap-3">
+          <div class="h-11 w-11 rounded-full bg-signal/15 flex items-center justify-center font-display text-signal font-semibold shrink-0">
+            ${initials(l.name)}
+          </div>
+          <div>
+            <p class="text-sm font-medium text-ink">${escapeHtml(l.name)}</p>
+            <p class="text-xs text-muted flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(l.room)}</p>
+          </div>
+        </div>
+        <p class="text-xs text-muted flex items-center gap-1.5"><i data-lucide="book-open" class="h-3.5 w-3.5"></i>${escapeHtml(l.lecture)}</p>
+        <a href="mailto:${encodeURIComponent(l.email)}" class="inline-flex items-center gap-1.5 text-xs text-signal hover:text-ink transition self-start">
+          <i data-lucide="mail" class="h-3.5 w-3.5"></i>${escapeHtml(l.email)}
+        </a>
+        <div class="flex items-center justify-between pt-3 border-t border-line">
+          <span class="text-xs text-muted">Sprechstunde gebucht?</span>
+          ${state.isAdmin ? `
+            <button data-toggle-lecturer="${l.id}" class="relative h-6 w-11 rounded-full transition ${l.bool ? 'bg-ok' : 'bg-surface2 border border-line'}">
+              <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${l.bool ? 'left-[22px]' : 'left-0.5'}"></span>
+            </button>` : `
+            <span class="text-xs font-mono px-2.5 py-1 rounded-full ${l.bool ? 'bg-ok/15 text-ok' : 'bg-surface2 text-muted'}">
+              ${l.bool ? 'Ja' : 'Nein'}
+            </span>`}
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('lecturersGrid').addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('[data-toggle-lecturer]');
+    const deleteBtn = e.target.closest('[data-delete-lecturer]');
+    if (toggleBtn) {
+      const lecturer = state.lecturers.find(x => String(x.id) === toggleBtn.dataset.toggleLecturer);
+      if (lecturer) updateLecturerStatus(lecturer.id, !lecturer.bool);
+    }
+    if (deleteBtn) {
+      if (confirm('Diesen Dozenten wirklich löschen?')) deleteLecturer(deleteBtn.dataset.deleteLecturer);
+    }
+  });
+
+  /* ---------------- Admin-Modal: Dozent hinzufügen ---------------- */
+  const lecturerModal = document.getElementById('lecturerModal');
+
+  function openLecturerModal() {
+    document.getElementById('lecturerForm').reset();
+    lecturerModal.classList.remove('hidden');
+  }
+  function closeLecturerModal() { lecturerModal.classList.add('hidden'); }
+
+  document.getElementById('addLecturerBtn').addEventListener('click', openLecturerModal);
+  document.getElementById('lecturerModalClose').addEventListener('click', closeLecturerModal);
+  lecturerModal.addEventListener('click', (e) => { if (e.target === lecturerModal) closeLecturerModal(); });
+
+  document.getElementById('lecturerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const entry = {
+      name: document.getElementById('lecturerName').value.trim(),
+      email: document.getElementById('lecturerEmail').value.trim(),
+      lecture: document.getElementById('lecturerLecture').value.trim(),
+      room: document.getElementById('lecturerRoom').value.trim(),
+      bool: document.getElementById('lecturerStatus').checked,
+    };
+    await addLecturer(entry);
+    closeLecturerModal();
+  });
+
+  /* ================================================================
+     ADMIN-ZUGANG
+  ================================================================= */
+  function handleAdminToggle() {
+    if (state.isAdmin) {
+      state.isAdmin = false;
+    } else {
+      const pw = prompt('Admin-Passwort eingeben:');
+      if (pw === null) return;
+      if (pw !== ADMIN_PASSWORD) { alert('Falsches Passwort.'); return; }
+      state.isAdmin = true;
+    }
+    updateAdminUI();
+    renderAll();
+  }
+  document.getElementById('adminToggleBtn').addEventListener('click', handleAdminToggle);
+  document.getElementById('adminToggleBtnMobile').addEventListener('click', handleAdminToggle);
+
+  function updateAdminUI() {
+    const badge = document.getElementById('adminStatusBadge');
+    badge.classList.toggle('hidden', !state.isAdmin);
+    badge.classList.toggle('flex', state.isAdmin);
+
+    const label = state.isAdmin ? 'Abmelden' : 'Admin-Zugang';
+    document.getElementById('adminBtnLabel').textContent = label;
+    document.getElementById('adminBtnLabelMobile').textContent = label;
+
+    const addEntryBtn = document.getElementById('addEntryBtn');
+    addEntryBtn.classList.toggle('hidden', !state.isAdmin);
+    addEntryBtn.classList.toggle('inline-flex', state.isAdmin);
+
+    const addLecturerBtn = document.getElementById('addLecturerBtn');
+    addLecturerBtn.classList.toggle('hidden', !state.isAdmin);
+    addLecturerBtn.classList.toggle('inline-flex', state.isAdmin);
+  }
+
+  /* ================================================================
+     NAVIGATION: Scroll-Sync & mobiles Menü
+  ================================================================= */
+  const navLinks = document.querySelectorAll('[data-section]');
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById(link.dataset.section).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      closeMobileMenu();
+    });
+  });
+
+  const sections = document.querySelectorAll('main section[id]');
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.toggle('nav-active', l.dataset.section === entry.target.id));
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => sectionObserver.observe(s));
+
+  const mobileMenu = document.getElementById('mobileMenu');
+  document.getElementById('mobileMenuBtn').addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+  function closeMobileMenu() { mobileMenu.classList.add('hidden'); }
+
+  /* ================================================================
+     GESAMT-RENDER & INITIALISIERUNG
+  ================================================================= */
+  function renderAll() {
+    renderLiveCard();
+    renderExamCountdown();
+    renderScheduleGrid();
+    renderLecturers();
+    renderTodos();
+    lucide.createIcons();
+  }
+
+  async function init() {
+    document.title = `${CONFIG.dashboardTitle} · ${CONFIG.courseName}`;
+    document.getElementById('sidebarTitle').textContent = CONFIG.dashboardTitle;
+    document.getElementById('mobileTitle').textContent = CONFIG.dashboardTitle;
+    document.getElementById('sidebarCourse').textContent = CONFIG.courseName;
+    document.getElementById('todayLabel').textContent =
+      new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: DASHBOARD_TIMEZONE });
+    document.getElementById('connectionBadge').classList.toggle('hidden', isSupabaseConfigured);
+
+    state.schedule = await loadSchedule();
+    state.lecturers = await loadLecturers();
+
+    updateAdminUI();
+    renderAll();
+    setInterval(renderLiveCard, 30000); // Live-Karte alle 30s aktualisieren
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
