@@ -19,7 +19,7 @@
           line:    '#242833', // Rahmen
           ink:     '#EDEBE8', // Haupttext
           muted:   '#98A0AC', // Sekundärtext
-          flame:   '#F2A93B', // Signaturfarbe: "live" / Primäraktionen / Verschoben-Highlight
+          flame:   '#F2A93B', // Signaturfarbe: "live" / Primäraktionen
           signal:  '#4CC9DE', // Vorlesung / Links
           alert:   '#F2556B', // Klausur / Löschen
           ok:      '#3ED598', // Status "Ja" / Erfolg
@@ -97,7 +97,7 @@
   <nav id="mobileMenu" class="hidden md:hidden bg-surface border-b border-line px-4 py-3 space-y-1 sticky top-[57px] z-30">
     <a href="#overview" data-section="overview" class="nav-link"><i data-lucide="layout-dashboard" class="h-4 w-4"></i>Übersicht</a>
     <a href="#schedule" data-section="schedule" class="nav-link"><i data-lucide="calendar-days" class="h-4 w-4"></i>Stundenplan</a>
-    <a href="#modules" data-section="modules" class="nav-link"><i data-lucide="book-open" class="h-4 w-4"></i>Module</a>
+    <a href="#lecturers" data-section="lecturers" class="nav-link"><i data-lucide="users" class="h-4 w-4"></i>Dozenten & Kontakte</a>
     <div class="pt-2 mt-2 border-t border-line">
       <button id="adminToggleBtnMobile" class="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface2 hover:text-ink transition">
         <i data-lucide="lock" class="h-4 w-4"></i>
@@ -123,7 +123,7 @@
     <nav class="flex-1 space-y-1">
       <a href="#overview" data-section="overview" class="nav-link"><i data-lucide="layout-dashboard" class="h-4 w-4"></i>Übersicht</a>
       <a href="#schedule" data-section="schedule" class="nav-link"><i data-lucide="calendar-days" class="h-4 w-4"></i>Stundenplan</a>
-      <a href="#modules" data-section="modules" class="nav-link"><i data-lucide="book-open" class="h-4 w-4"></i>Module</a>
+      <a href="#lecturers" data-section="lecturers" class="nav-link"><i data-lucide="users" class="h-4 w-4"></i>Dozenten & Kontakte</a>
     </nav>
 
     <div class="pt-4 border-t border-line">
@@ -220,18 +220,18 @@
       <div id="scheduleGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
     </section>
 
-    <!-- ---------- C) MODULE ---------- -->
-    <section id="modules">
+    <!-- ---------- C) DOZENTEN & KONTAKTE ---------- -->
+    <section id="lecturers">
       <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 class="font-display text-2xl text-ink font-semibold flex items-center gap-2">
-          <i data-lucide="book-open" class="h-5 w-5 text-flame"></i>
-          Module
+          <i data-lucide="users" class="h-5 w-5 text-flame"></i>
+          Dozenten & Kontakte
         </h2>
-        <button id="addModuleBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
-          <i data-lucide="plus" class="h-4 w-4"></i> Modul
+        <button id="addLecturerBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
+          <i data-lucide="plus" class="h-4 w-4"></i> Dozent
         </button>
       </div>
-      <div id="modulesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      <div id="lecturersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </section>
 
   </main>
@@ -273,35 +273,43 @@
             <input type="text" id="entryRoom2" placeholder="B2.03" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
           </div>
         </div>
-        <p class="text-xs text-muted">Tipps: Enthält der Name "Klausur", wird der Termin automatisch als Klausur markiert. Enthält er "verschoben", "verlegt", "ersatz" oder "ausweich", wird er orange als verschoben hervorgehoben. Start/Ende werden immer in Berliner Zeit (MEZ/MESZ) angegeben.</p>
+        <p class="text-xs text-muted">Tipp: Enthält der Name "Klausur", wird der Termin automatisch als Klausur markiert (rote Markierung, Countdown). Start/Ende werden hier immer in Berliner Zeit (MEZ/MESZ) angegeben und ausgewertet.</p>
         <button type="submit" class="w-full rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
       </form>
     </div>
   </div>
 
   <!-- ============================================================
-       MODAL: Modul hinzufügen (nur Admin)
+       MODAL: Dozent hinzufügen (nur Admin)
   ============================================================= -->
-  <div id="moduleModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div id="lecturerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div class="w-full max-w-md rounded-2xl bg-surface border border-line shadow-card p-6">
       <div class="flex items-center justify-between mb-5">
-        <h3 class="font-display text-lg text-ink font-semibold">Modul hinzufügen</h3>
-        <button id="moduleModalClose" class="text-muted hover:text-ink transition" aria-label="Schließen">
+        <h3 class="font-display text-lg text-ink font-semibold">Dozent hinzufügen</h3>
+        <button id="lecturerModalClose" class="text-muted hover:text-ink transition" aria-label="Schließen">
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
-      <form id="moduleForm" class="space-y-4">
+      <form id="lecturerForm" class="space-y-4">
         <div>
-          <label class="block text-xs text-muted mb-1">Modul / Vorlesung</label>
-          <input required type="text" id="moduleLecture" placeholder="z. B. Softwareentwicklung II" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+          <label class="block text-xs text-muted mb-1">Name</label>
+          <input required type="text" id="lecturerName" placeholder="Prof. Dr. Nachname" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">E-Mail</label>
+          <input required type="email" id="lecturerEmail" placeholder="name@dhbw-example.de" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">Vorlesung</label>
+          <input required type="text" id="lecturerLecture" placeholder="z. B. Softwareentwicklung II" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
         </div>
         <div>
           <label class="block text-xs text-muted mb-1">Standort</label>
-          <input required type="text" id="moduleRoom" placeholder="B2.14" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
+          <input required type="text" id="lecturerRoom" placeholder="B2.14" class="w-full rounded-lg bg-surface2 border border-line px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50">
         </div>
         <label class="flex items-center gap-2 text-sm text-ink">
-          <input type="checkbox" id="moduleStatus" class="h-4 w-4 rounded border-line bg-surface2 accent-flame">
-          Status (Ja/Nein)
+          <input type="checkbox" id="lecturerStatus" class="h-4 w-4 rounded border-line bg-surface2 accent-flame">
+          Sprechstunde bereits gebucht?
         </label>
         <button type="submit" class="w-full rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
       </form>
@@ -320,13 +328,13 @@
   /* ================================================================
      SUPABASE — Zugangsdaten & Tabellen
      ----------------------------------------------------------------
-     WICHTIG: Hier deine echten Zugangsdaten eintragen (Supabase-Projekt
-     → Project Settings → API). Diese wurden beim Überarbeiten der Datei
-     zurückgesetzt und müssen erneut eingefügt werden!
+     Hier deine echten Zugangsdaten eintragen (Supabase-Projekt
+     → Project Settings → API). Ohne gültige Werte bleiben Stundenplan
+     und Dozenten leer und ein Hinweis-Badge erscheint oben rechts.
 
-     Tabellen (echte Namen, wie in Supabase angelegt):
+     Tabellen:
 
-     1) "dhbw.app-Calendar"  (Stundenplan)
+     1) "termine"
         - id           int8         Primary Key (automatisch)
         - name         text         Fach / Veranstaltung
         - startTime    timestamptz  Beginn — in der DB in UTC gespeichert
@@ -334,23 +342,20 @@
         - rooms__001   text         Hauptraum
         - rooms__002   text         Nebenraum (optional)
 
-     2) "ProfsAndContacts"  (Module)
+     2) "dozenten"
         - id      int8   Primary Key (automatisch)
-        - lecture text   Modul / Vorlesung — wird als Kartentitel angezeigt
-        - room    text   Standort
-        - bool    bool   Ja/Nein-Status
-
-        Hinweis: name/email wurden aus Datenschutzgründen entfernt.
-        Falls die Spalten in Supabase noch existieren, richten die
-        insert()-Aufrufe hier keinen Schaden an (sie werden schlicht
-        nicht mitgeschickt) — du kannst sie unabhängig davon löschen.
+        - name    text
+        - email   text
+        - lecture text    unterrichtete Vorlesung
+        - room    text    Standort
+        - bool    bool    Ja/Nein-Status (z. B. Sprechstunde gebucht)
   ================================================================= */
   const SUPABASE_URL = 'https://mfvajwwbcnmhwpxwwcld.supabase.co';           // z. B. 'https://xxxx.supabase.co'
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mdmFqd3diY25taHdweHd3Y2xkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5MTU0NDIsImV4cCI6MjEwMTQ5MTQ0Mn0.w_uXxN3ibpHPG24jU13mblY210bU1nnWrJKELgMnvwk';
 
   const SUPABASE_TABLE_TERMINE = 'dhbw.app-Calendar';
-  const SUPABASE_TABLE_MODULES = 'ProfsAndContacts';
-
+  const SUPABASE_TABLE_DOZENTEN = 'ProfsAndContacts';
+  
   const isSupabaseConfigured =
     SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
 
@@ -372,16 +377,34 @@
   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'];
 
   /* ================================================================
-     ZEITZONEN-HILFSFUNKTIONEN (Europe/Berlin)
+     ZEITZONEN-HILFSFUNKTIONEN (WICHTIG!)
+     ----------------------------------------------------------------
+     In der Datenbank stehen startTime/endTime als timestamptz, also
+     absolute UTC-Zeitpunkte. Ein JavaScript-Date-Objekt kennt diesen
+     Zeitpunkt bereits korrekt, sobald wir new Date(utcString) aufrufen
+     — Vergleiche wie "läuft die Vorlesung gerade" funktionieren daher
+     automatisch richtig, unabhängig von der Zeitzone.
+
+     Reine ANZEIGE (Uhrzeit, Datum) muss aber explizit in Europe/Berlin
+     formatiert werden, sonst zeigt der Browser ggf. seine eigene
+     Systemzeitzone. Und beim SCHREIBEN eines neuen Termins muss die
+     eingegebene "Wanduhrzeit" (z. B. "10:00" aus dem datetime-local-
+     Feld) korrekt unter Berücksichtigung von MEZ/MESZ in einen echten
+     UTC-Zeitstempel umgerechnet werden, bevor er an Supabase geht.
   ================================================================= */
   const DASHBOARD_TIMEZONE = 'Europe/Berlin';
 
+  // "YYYY-MM-DD" eines Date-Objekts, ausgewertet in der angegebenen Zeitzone
   function isoDateInTz(date, timeZone = DASHBOARD_TIMEZONE) {
     return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
   }
+  // "Heute" aus Sicht von Europe/Berlin — unabhängig von der Zeitzone des Besuchers
   function todayInBerlin() {
     return isoDateInTz(new Date());
   }
+
+  // Ermittelt den aktuellen UTC-Offset (in Minuten) einer IANA-Zeitzone zu einem
+  // gegebenen Zeitpunkt. Berücksichtigt MEZ/MESZ automatisch über die Intl-API.
   function getTimeZoneOffsetMinutes(date, timeZone) {
     const dtf = new Intl.DateTimeFormat('en-US', {
       timeZone, hourCycle: 'h23',
@@ -398,12 +421,18 @@
     );
     return (asIfUTC - date.getTime()) / 60000;
   }
+
+  // Wandelt eine "Wanduhrzeit" aus <input type="datetime-local"> (z. B. "2026-08-06T10:00"),
+  // die als Berliner Ortszeit gemeint ist, in einen korrekten UTC-ISO-String um.
   function berlinWallTimeToUtcIso(localDateTimeStr) {
     const withSeconds = localDateTimeStr.length === 16 ? localDateTimeStr + ':00' : localDateTimeStr;
-    const naiveUtc = new Date(withSeconds + 'Z');
+    const naiveUtc = new Date(withSeconds + 'Z'); // nur als Referenzpunkt für die Offset-Ermittlung
     const offsetMinutes = getTimeZoneOffsetMinutes(naiveUtc, DASHBOARD_TIMEZONE);
     return new Date(naiveUtc.getTime() - offsetMinutes * 60000).toISOString();
   }
+
+  // Wandelt einen UTC-ISO-String aus der Datenbank zurück in das Format, das
+  // <input type="datetime-local"> als value erwartet — angezeigt in Berliner Ortszeit.
   function toBerlinDatetimeLocalValue(utcIsoStr) {
     const dtf = new Intl.DateTimeFormat('en-CA', {
       timeZone: DASHBOARD_TIMEZONE, hourCycle: 'h23',
@@ -416,6 +445,7 @@
     }, {});
     return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
   }
+
   function formatTime(dtStr) {
     return new Date(dtStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: DASHBOARD_TIMEZONE });
   }
@@ -424,7 +454,11 @@
   }
 
   /* ================================================================
-     KALENDER-TAGES-ARITHMETIK (reine "YYYY-MM-DD"-String-Rechnung)
+     KALENDER-TAGES-ARITHMETIK
+     ----------------------------------------------------------------
+     Reine "YYYY-MM-DD"-String-Rechnung (intern über Date.UTC), damit
+     Wochennavigation & Tagesvergleiche unabhängig von der Zeitzone
+     des Browsers immer dieselben Kalendertage treffen.
   ================================================================= */
   function parseIsoDateParts(iso) {
     const [y, m, d] = iso.split('-').map(Number);
@@ -455,13 +489,10 @@
 
   /* ================================================================
      STUNDENPLAN-HILFSFUNKTIONEN
+     (Klausur-Erkennung läuft über den Namen — kein separates "Typ"-Feld)
   ================================================================= */
   function isExamEntry(e) {
     return /klausur/i.test(e.name);
-  }
-  // Schlüsselwörter für verschobene/verlegte Termine (case-insensitive)
-  function isMovedEntry(e) {
-    return /verschoben|verlegt|ersatz|ausweich/i.test(e.name);
   }
   function formatRooms(e) {
     return [e.rooms__001, e.rooms__002].filter(Boolean).join(' · ');
@@ -472,6 +503,10 @@
 
   /* ================================================================
      GLOBALER ZUSTAND
+     ----------------------------------------------------------------
+     state.schedule / state.lecturers sind reine Zwischenspeicher für
+     das Rendering — Quelle der Wahrheit ist immer Supabase. Nach jedem
+     Insert/Update/Delete wird die jeweilige Tabelle neu geladen.
   ================================================================= */
   const TODO_STORAGE_KEY = 'dhbw_dashboard_todos';
 
@@ -490,8 +525,8 @@
   const state = {
     isAdmin: false,
     weekOffset: 0,
-    schedule: [], // { id, name, startTime, endTime, rooms__001, rooms__002 }
-    modules: [],  // { id, lecture, room, bool }
+    schedule: [],   // { id, name, startTime, endTime, rooms__001, rooms__002 }
+    lecturers: [],  // { id, name, email, lecture, room, bool }
     todos: loadTodosFromStorage(),
   };
 
@@ -505,19 +540,19 @@
     if (error) { console.error(error); alert('Stundenplan konnte nicht geladen werden: ' + error.message); return []; }
     return data;
   }
-  async function loadModules() {
+  async function loadLecturers() {
     if (!supabaseClient) return [];
     const { data, error } = await supabaseClient
-      .from(SUPABASE_TABLE_MODULES).select('*').order('lecture', { ascending: true });
-    if (error) { console.error(error); alert('Module konnten nicht geladen werden: ' + error.message); return []; }
+      .from(SUPABASE_TABLE_DOZENTEN).select('*').order('name', { ascending: true });
+    if (error) { console.error(error); alert('Dozenten konnten nicht geladen werden: ' + error.message); return []; }
     return data;
   }
   async function refreshSchedule() {
     state.schedule = await loadSchedule();
     renderAll();
   }
-  async function refreshModules() {
-    state.modules = await loadModules();
+  async function refreshLecturers() {
+    state.lecturers = await loadLecturers();
     renderAll();
   }
 
@@ -540,23 +575,23 @@
     await refreshSchedule();
   }
 
-  async function addModule(entry) {
+  async function addLecturer(entry) {
     if (!supabaseClient) return alert('Supabase ist nicht konfiguriert (SUPABASE_URL / SUPABASE_ANON_KEY oben im Script eintragen).');
-    const { error } = await supabaseClient.from(SUPABASE_TABLE_MODULES).insert(entry);
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).insert(entry);
     if (error) return alert('Fehler beim Speichern: ' + error.message);
-    await refreshModules();
+    await refreshLecturers();
   }
-  async function deleteModule(id) {
+  async function deleteLecturer(id) {
     if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
-    const { error } = await supabaseClient.from(SUPABASE_TABLE_MODULES).delete().eq('id', id);
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).delete().eq('id', id);
     if (error) return alert('Fehler beim Löschen: ' + error.message);
-    await refreshModules();
+    await refreshLecturers();
   }
-  async function updateModuleStatus(id, value) {
+  async function updateLecturerStatus(id, value) {
     if (!supabaseClient) return alert('Supabase ist nicht konfiguriert.');
-    const { error } = await supabaseClient.from(SUPABASE_TABLE_MODULES).update({ bool: value }).eq('id', id);
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_DOZENTEN).update({ bool: value }).eq('id', id);
     if (error) return alert('Fehler beim Aktualisieren: ' + error.message);
-    await refreshModules();
+    await refreshLecturers();
   }
 
   /* ================================================================
@@ -694,20 +729,11 @@
 
   /* ================================================================
      RENDER: Stundenplan (Wochenkalender)
-     ----------------------------------------------------------------
-     - Verschobene Termine (Name enthält "verschoben"/"verlegt"/"ersatz"/
-       "ausweich") werden orange hervorgehoben statt cyan/rot.
-     - Zwischen zwei Terminen desselben Tages wird ab 60 Minuten Lücke
-       automatisch ein "Hohlstunde"-Block eingefügt.
   ================================================================= */
   function scheduleCardHtml(e) {
-    const moved = isMovedEntry(e);
-    const exam = isExamEntry(e);
-    const borderClass = moved ? 'border-l-flame' : exam ? 'border-l-alert' : 'border-l-signal';
-    const bgClass = moved ? 'bg-flame/10' : 'bg-surface';
+    const accentClass = isExamEntry(e) ? 'border-l-alert' : 'border-l-signal';
     return `
-      <div class="group relative rounded-xl border border-line border-l-4 ${borderClass} ${bgClass} p-3 shadow-card">
-        ${moved ? `<span class="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-flame bg-flame/15 rounded-full px-2 py-0.5 mb-1.5"><i data-lucide="alert-triangle" class="h-3 w-3"></i>Verschoben</span>` : ''}
+      <div class="group relative rounded-xl border border-line border-l-4 ${accentClass} bg-surface p-3 shadow-card">
         <p class="text-xs font-mono text-muted">${formatTime(e.startTime)} – ${formatTime(e.endTime)}</p>
         <p class="text-sm font-medium text-ink mt-0.5">${escapeHtml(e.name)}</p>
         <p class="text-xs text-muted mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(formatRooms(e))}</p>
@@ -717,35 +743,6 @@
             <button data-delete-entry="${e.id}" class="p-1 rounded-md bg-surface2 hover:bg-line text-muted hover:text-alert transition"><i data-lucide="trash-2" class="h-3 w-3"></i></button>
           </div>` : ''}
       </div>`;
-  }
-
-  // Dezenter Lücken-Block, wenn zwischen zwei Terminen >= 60 Minuten Pause liegen
-  function gapBlockHtml(prevEndTime, nextStartTime) {
-    const gapMinutes = Math.round((new Date(nextStartTime) - new Date(prevEndTime)) / 60000);
-    const hours = gapMinutes / 60;
-    const label = hours === 1 ? '1 Stunde Pause' : `${hours.toLocaleString('de-DE')} Stunden Pause`;
-    return `
-      <div class="rounded-xl border border-dashed border-line bg-surface2/30 px-3 py-2.5 text-center">
-        <p class="text-[11px] uppercase tracking-wide text-muted font-mono">Hohlstunde</p>
-        <p class="text-xs text-muted mt-0.5">${label}</p>
-      </div>`;
-  }
-
-  // Baut die Kartenliste eines Tages inkl. eingestreuter Hohlstunden-Blöcke
-  function dayColumnHtml(dayEntries) {
-    if (dayEntries.length === 0) return `<p class="text-xs text-muted px-1">–</p>`;
-    const blocks = [];
-    dayEntries.forEach((entry, idx) => {
-      blocks.push(scheduleCardHtml(entry));
-      const next = dayEntries[idx + 1];
-      if (next) {
-        const gapMinutes = (new Date(next.startTime) - new Date(entry.endTime)) / 60000;
-        if (gapMinutes >= 60) {
-          blocks.push(gapBlockHtml(entry.endTime, next.startTime));
-        }
-      }
-    });
-    return blocks.join('');
   }
 
   function renderScheduleGrid() {
@@ -771,7 +768,7 @@
             <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
           </div>
           <div class="space-y-2 min-h-[2rem]">
-            ${dayColumnHtml(dayEntries)}
+            ${dayEntries.length ? dayEntries.map(scheduleCardHtml).join('') : `<p class="text-xs text-muted px-1">–</p>`}
           </div>
         </div>`;
     }).join('');
@@ -828,77 +825,90 @@
   });
 
   /* ================================================================
-     RENDER: Module
-     (kein Name/E-Mail mehr — lecture ist der Kartentitel)
+     RENDER: Dozenten & Kontakte
   ================================================================= */
-  function renderModules() {
-    const grid = document.getElementById('modulesGrid');
+  function initials(name) {
+    const clean = name.replace(/Prof\.|Dr\./g, '').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    return parts.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
 
-    if (state.modules.length === 0) {
-      grid.innerHTML = `<p class="text-sm text-muted">Noch keine Module hinterlegt.${state.isAdmin ? ' Leg über "+ Modul" den ersten Eintrag an.' : ''}</p>`;
+  function renderLecturers() {
+    const grid = document.getElementById('lecturersGrid');
+
+    if (state.lecturers.length === 0) {
+      grid.innerHTML = `<p class="text-sm text-muted">Noch keine Dozenten hinterlegt.${state.isAdmin ? ' Leg über "+ Dozent" den ersten Eintrag an.' : ''}</p>`;
       return;
     }
 
-    grid.innerHTML = state.modules.map(m => `
+    grid.innerHTML = state.lecturers.map(l => `
       <div class="group relative rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col gap-4">
         ${state.isAdmin ? `
-          <button data-delete-module="${m.id}" class="absolute top-3 right-3 hidden group-hover:flex p-1.5 rounded-md bg-surface2 hover:bg-line text-muted hover:text-alert transition" aria-label="Modul löschen">
+          <button data-delete-lecturer="${l.id}" class="absolute top-3 right-3 hidden group-hover:flex p-1.5 rounded-md bg-surface2 hover:bg-line text-muted hover:text-alert transition" aria-label="Dozent löschen">
             <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
           </button>` : ''}
         <div class="flex items-center gap-3">
-          <div class="h-11 w-11 rounded-full bg-signal/15 flex items-center justify-center shrink-0">
-            <i data-lucide="book-open" class="h-5 w-5 text-signal"></i>
+          <div class="h-11 w-11 rounded-full bg-signal/15 flex items-center justify-center font-display text-signal font-semibold shrink-0">
+            ${initials(l.name)}
           </div>
-          <p class="text-lg font-display font-semibold text-ink leading-tight">${escapeHtml(m.lecture)}</p>
+          <div>
+            <p class="text-sm font-medium text-ink">${escapeHtml(l.name)}</p>
+            <p class="text-xs text-muted flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(l.room)}</p>
+          </div>
         </div>
-        <p class="text-xs text-muted flex items-center gap-1.5"><i data-lucide="map-pin" class="h-3.5 w-3.5"></i>${escapeHtml(m.room)}</p>
+        <p class="text-xs text-muted flex items-center gap-1.5"><i data-lucide="book-open" class="h-3.5 w-3.5"></i>${escapeHtml(l.lecture)}</p>
+        <a href="mailto:${encodeURIComponent(l.email)}" class="inline-flex items-center gap-1.5 text-xs text-signal hover:text-ink transition self-start">
+          <i data-lucide="mail" class="h-3.5 w-3.5"></i>${escapeHtml(l.email)}
+        </a>
         <div class="flex items-center justify-between pt-3 border-t border-line">
-          <span class="text-xs text-muted">Status</span>
+          <span class="text-xs text-muted">Sprechstunde gebucht?</span>
           ${state.isAdmin ? `
-            <button data-toggle-module="${m.id}" class="relative h-6 w-11 rounded-full transition ${m.bool ? 'bg-ok' : 'bg-surface2 border border-line'}">
-              <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${m.bool ? 'left-[22px]' : 'left-0.5'}"></span>
+            <button data-toggle-lecturer="${l.id}" class="relative h-6 w-11 rounded-full transition ${l.bool ? 'bg-ok' : 'bg-surface2 border border-line'}">
+              <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${l.bool ? 'left-[22px]' : 'left-0.5'}"></span>
             </button>` : `
-            <span class="text-xs font-mono px-2.5 py-1 rounded-full ${m.bool ? 'bg-ok/15 text-ok' : 'bg-surface2 text-muted'}">
-              ${m.bool ? 'Ja' : 'Nein'}
+            <span class="text-xs font-mono px-2.5 py-1 rounded-full ${l.bool ? 'bg-ok/15 text-ok' : 'bg-surface2 text-muted'}">
+              ${l.bool ? 'Ja' : 'Nein'}
             </span>`}
         </div>
       </div>`).join('');
   }
 
-  document.getElementById('modulesGrid').addEventListener('click', (e) => {
-    const toggleBtn = e.target.closest('[data-toggle-module]');
-    const deleteBtn = e.target.closest('[data-delete-module]');
+  document.getElementById('lecturersGrid').addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('[data-toggle-lecturer]');
+    const deleteBtn = e.target.closest('[data-delete-lecturer]');
     if (toggleBtn) {
-      const mod = state.modules.find(x => String(x.id) === toggleBtn.dataset.toggleModule);
-      if (mod) updateModuleStatus(mod.id, !mod.bool);
+      const lecturer = state.lecturers.find(x => String(x.id) === toggleBtn.dataset.toggleLecturer);
+      if (lecturer) updateLecturerStatus(lecturer.id, !lecturer.bool);
     }
     if (deleteBtn) {
-      if (confirm('Dieses Modul wirklich löschen?')) deleteModule(deleteBtn.dataset.deleteModule);
+      if (confirm('Diesen Dozenten wirklich löschen?')) deleteLecturer(deleteBtn.dataset.deleteLecturer);
     }
   });
 
-  /* ---------------- Admin-Modal: Modul hinzufügen ---------------- */
-  const moduleModal = document.getElementById('moduleModal');
+  /* ---------------- Admin-Modal: Dozent hinzufügen ---------------- */
+  const lecturerModal = document.getElementById('lecturerModal');
 
-  function openModuleModal() {
-    document.getElementById('moduleForm').reset();
-    moduleModal.classList.remove('hidden');
+  function openLecturerModal() {
+    document.getElementById('lecturerForm').reset();
+    lecturerModal.classList.remove('hidden');
   }
-  function closeModuleModal() { moduleModal.classList.add('hidden'); }
+  function closeLecturerModal() { lecturerModal.classList.add('hidden'); }
 
-  document.getElementById('addModuleBtn').addEventListener('click', openModuleModal);
-  document.getElementById('moduleModalClose').addEventListener('click', closeModuleModal);
-  moduleModal.addEventListener('click', (e) => { if (e.target === moduleModal) closeModuleModal(); });
+  document.getElementById('addLecturerBtn').addEventListener('click', openLecturerModal);
+  document.getElementById('lecturerModalClose').addEventListener('click', closeLecturerModal);
+  lecturerModal.addEventListener('click', (e) => { if (e.target === lecturerModal) closeLecturerModal(); });
 
-  document.getElementById('moduleForm').addEventListener('submit', async (e) => {
+  document.getElementById('lecturerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const entry = {
-      lecture: document.getElementById('moduleLecture').value.trim(),
-      room: document.getElementById('moduleRoom').value.trim(),
-      bool: document.getElementById('moduleStatus').checked,
+      name: document.getElementById('lecturerName').value.trim(),
+      email: document.getElementById('lecturerEmail').value.trim(),
+      lecture: document.getElementById('lecturerLecture').value.trim(),
+      room: document.getElementById('lecturerRoom').value.trim(),
+      bool: document.getElementById('lecturerStatus').checked,
     };
-    await addModule(entry);
-    closeModuleModal();
+    await addLecturer(entry);
+    closeLecturerModal();
   });
 
   /* ================================================================
@@ -932,9 +942,9 @@
     addEntryBtn.classList.toggle('hidden', !state.isAdmin);
     addEntryBtn.classList.toggle('inline-flex', state.isAdmin);
 
-    const addModuleBtn = document.getElementById('addModuleBtn');
-    addModuleBtn.classList.toggle('hidden', !state.isAdmin);
-    addModuleBtn.classList.toggle('inline-flex', state.isAdmin);
+    const addLecturerBtn = document.getElementById('addLecturerBtn');
+    addLecturerBtn.classList.toggle('hidden', !state.isAdmin);
+    addLecturerBtn.classList.toggle('inline-flex', state.isAdmin);
   }
 
   /* ================================================================
@@ -970,7 +980,7 @@
     renderLiveCard();
     renderExamCountdown();
     renderScheduleGrid();
-    renderModules();
+    renderLecturers();
     renderTodos();
     lucide.createIcons();
   }
@@ -985,7 +995,7 @@
     document.getElementById('connectionBadge').classList.toggle('hidden', isSupabaseConfigured);
 
     state.schedule = await loadSchedule();
-    state.modules = await loadModules();
+    state.lecturers = await loadLecturers();
 
     updateAdminUI();
     renderAll();
