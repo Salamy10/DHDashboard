@@ -165,6 +165,7 @@
           </h2>
           <p class="text-sm text-muted mt-1" id="todayLabel"></p>
         </div>
+        <span id="connectionBadge" class="hidden sm:inline-flex text-[10px] uppercase tracking-wide text-alert border border-alert/40 rounded-full px-2.5 py-1" title="Bitte SUPABASE_URL und SUPABASE_ANON_KEY im Script-Bereich der index.html eintragen.">Supabase nicht verbunden</span>
       </div>
 
       <!-- Live / Als Nächstes (Signatur-Element) -->
@@ -214,7 +215,7 @@
           <i data-lucide="calendar-days" class="h-5 w-5 text-flame"></i>
           Stundenplan
         </h2>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-3">
           <div class="flex items-center gap-1 rounded-lg border border-line bg-surface p-1">
             <button id="prevWeekBtn" class="p-1.5 rounded-md hover:bg-surface2 text-muted hover:text-ink transition" aria-label="Vorherige Woche">
               <i data-lucide="chevron-left" class="h-4 w-4"></i>
@@ -224,26 +225,12 @@
               <i data-lucide="chevron-right" class="h-4 w-4"></i>
             </button>
           </div>
-          <button id="todayBtn" class="rounded-lg border border-line bg-surface px-3 py-2 text-xs font-medium text-muted hover:text-ink hover:bg-surface2 transition">
-            Heute
-          </button>
-          <label class="relative flex items-center justify-center h-9 w-9 rounded-lg border border-line bg-surface hover:bg-surface2 transition cursor-pointer" title="Zu Datum springen">
-            <i data-lucide="calendar" class="h-4 w-4 text-muted pointer-events-none"></i>
-            <input type="date" id="jumpToDateInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" aria-label="Zu Datum springen">
-          </label>
           <button id="addEntryBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
             <i data-lucide="plus" class="h-4 w-4"></i> Termin
           </button>
         </div>
       </div>
-
-      <!-- Zeitachsen-Kalender: linke Stundenleiste + 5 Tagesspalten, Karten werden per JS absolut positioniert -->
-      <div class="rounded-2xl border border-line bg-surface shadow-card overflow-x-auto">
-        <div class="min-w-[760px] px-2 pb-3">
-          <div id="scheduleHeaderRow" class="grid pt-3 pb-1" style="grid-template-columns: 48px repeat(5, minmax(0,1fr));"></div>
-          <div id="scheduleBodyRow" class="grid gap-x-1" style="grid-template-columns: 48px repeat(5, minmax(0,1fr));"></div>
-        </div>
-      </div>
+      <div id="scheduleGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
     </section>
 
     <!-- ---------- C) MODULE ---------- -->
@@ -315,6 +302,42 @@
   </div>
 
   <!-- ============================================================
+       MODAL: Termin-Detailansicht (für alle Nutzer, Admin-Aktionen nur für Admin)
+  ============================================================= -->
+  <div id="entryDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-2xl bg-surface border border-line shadow-card p-6">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <h3 id="detailName" class="font-display text-lg text-ink font-semibold leading-snug"></h3>
+        <button id="entryDetailClose" class="text-muted hover:text-ink transition shrink-0" aria-label="Schließen">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <div id="detailMovedBadge" class="hidden mb-4 inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wide text-flame bg-flame/15 rounded-full px-3 py-1">
+        <i data-lucide="alert-triangle" class="h-3.5 w-3.5"></i>
+        Termin wurde verschoben
+      </div>
+      <div class="space-y-3 text-sm">
+        <div class="flex items-center gap-2 text-ink">
+          <i data-lucide="clock" class="h-4 w-4 text-muted shrink-0"></i>
+          <span id="detailTime"></span>
+        </div>
+        <div class="flex items-start gap-2 text-ink">
+          <i data-lucide="map-pin" class="h-4 w-4 text-muted shrink-0 mt-0.5"></i>
+          <div id="detailRooms"></div>
+        </div>
+      </div>
+      <div id="detailAdminActions" class="hidden mt-6 pt-4 border-t border-line gap-2">
+        <button id="detailEditBtn" class="flex-1 rounded-lg bg-surface2 border border-line text-ink text-sm font-medium py-2.5 hover:bg-line transition flex items-center justify-center gap-1.5">
+          <i data-lucide="pencil" class="h-4 w-4"></i> Termin bearbeiten
+        </button>
+        <button id="detailDeleteBtn" class="flex-1 rounded-lg bg-alert/15 text-alert text-sm font-medium py-2.5 hover:bg-alert/25 transition flex items-center justify-center gap-1.5">
+          <i data-lucide="trash-2" class="h-4 w-4"></i> Termin löschen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
        MODAL: Modul hinzufügen (nur Admin)
   ============================================================= -->
   <div id="moduleModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -380,7 +403,7 @@
         insert()-Aufrufe hier keinen Schaden an (sie werden schlicht
         nicht mitgeschickt) — du kannst sie unabhängig davon löschen.
   ================================================================= */
-  const SUPABASE_URL = 'https://mfvajwwbcnmhwpxwwcld.supabase.co';           // z.B. 'https://xxxx.supabase.co'
+  const SUPABASE_URL = 'https://mfvajwwbcnmhwpxwwcld.supabase.co';           // z. B. 'https://xxxx.supabase.co'
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mdmFqd3diY25taHdweHd3Y2xkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5MTU0NDIsImV4cCI6MjEwMTQ5MTQ0Mn0.w_uXxN3ibpHPG24jU13mblY210bU1nnWrJKELgMnvwk';
 
   const SUPABASE_TABLE_TERMINE = 'dhbw.app-Calendar';
@@ -504,57 +527,15 @@
   function entryDayIso(e) {
     return isoDateInTz(new Date(e.startTime));
   }
-
-  /* ================================================================
-     ZEITACHSEN-KALENDER (festes Raster 08:00–20:00 Uhr)
-     ----------------------------------------------------------------
-     PX_PER_HOUR bestimmt den Maßstab (60px = 1 Stunde, wie im Beispiel
-     gefordert). Karten werden per top/height (in Pixel) absolut in
-     ihrer Tagesspalte positioniert statt einfach untereinander gelistet.
-  ================================================================= */
-  const CALENDAR_START_HOUR = 8;
-  const CALENDAR_END_HOUR = 20;
-  const PX_PER_HOUR = 60;
-  const CALENDAR_HEIGHT = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * PX_PER_HOUR;
-
-  // Uhrzeit-Anteil (Stunde/Minute) eines Zeitstempels, ausgewertet in Berliner Ortszeit
-  function berlinTimeParts(dtStr) {
-    const dtf = new Intl.DateTimeFormat('en-GB', {
-      timeZone: DASHBOARD_TIMEZONE, hourCycle: 'h23',
-      hour: '2-digit', minute: '2-digit',
-    });
-    const parts = dtf.formatToParts(new Date(dtStr)).reduce((acc, p) => {
-      if (p.type !== 'literal') acc[p.type] = p.value;
-      return acc;
-    }, {});
-    return { hour: Number(parts.hour), minute: Number(parts.minute) };
-  }
-  // Minuten seit CALENDAR_START_HOUR (kann negativ/über 720 sein, wenn außerhalb des Rasters)
-  function minutesFromCalendarStart(dtStr) {
-    const { hour, minute } = berlinTimeParts(dtStr);
-    return (hour - CALENDAR_START_HOUR) * 60 + minute;
-  }
-  // Begrenzt auf den sichtbaren Bereich [0, CALENDAR_HEIGHT-Minuten]
-  function clampMinutes(min) {
-    return Math.min(Math.max(min, 0), (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * 60);
-  }
-  // Gestrichelte Stundenlinien (identisch für jede Tagesspalte, daher einmal generiert)
-  function hourLinesHtml() {
-    let html = '';
-    for (let h = CALENDAR_START_HOUR; h <= CALENDAR_END_HOUR; h++) {
-      const top = (h - CALENDAR_START_HOUR) * PX_PER_HOUR;
-      html += `<div class="absolute left-0 right-0 border-t border-dashed border-line/60" style="top:${top}px;"></div>`;
-    }
-    return html;
-  }
-  // Stundenbeschriftung links neben dem Raster
-  function hourRulerHtml() {
-    let html = '';
-    for (let h = CALENDAR_START_HOUR; h <= CALENDAR_END_HOUR; h++) {
-      const top = (h - CALENDAR_START_HOUR) * PX_PER_HOUR;
-      html += `<div class="absolute right-2 -translate-y-1/2 text-[10px] font-mono text-muted" style="top:${top}px;">${String(h).padStart(2, '0')}:00</div>`;
-    }
-    return html;
+  // Entfernt Füllwörter für die kompakte Kalenderkarten-Ansicht.
+  // Ändert NICHTS an den Daten selbst — nur der angezeigte String wird gekürzt,
+  // im Detail-Modal wird weiterhin der volle Original-Name gezeigt.
+  function cleanCardTitle(name) {
+    const cleaned = name
+      .replace(/\b(verschoben(e|er)?|vorlesung)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleaned || name.trim();
   }
 
   /* ================================================================
@@ -587,7 +568,6 @@
       title: 'Cloud',
       icon: 'cloud',
       links: [
-        { label: 'WI Are Family - Filen', href: 'https://app.filen.io/#/f/bdcc7988-5979-448b-859c-2ae8fe801622%2354626969725032783863626d3969366377736a74374e5168443332466271536c' },
         { label: 'WWIBE225', href: 'https://drive.google.com/drive/folders/1Yr5x0twGJTGS0xy_N4yc3UsunUbb0S0G?usp=drive_link' },
         { label: 'Altklausuren - Grundlagen IT', href: 'https://drive.google.com/drive/folders/1JW6NShPnTgJn-mIZ1tZMv97n05TmSKjX' },
         { label: 'WI are family Dropbox', href: 'https://www.dropbox.com/scl/fo/wp8syw6htebl3ga2mbkp1/AGGGwph0YR9kIjTNpxvVejg?rlkey=147jxq1qdn8wdwelajetprb3i&st=9ze0eptn&e=2&dl=0' },
@@ -839,70 +819,50 @@
   });
 
   /* ================================================================
-     RENDER: Stundenplan (Zeitachsen-Kalender, 08:00–20:00 Uhr)
+     RENDER: Stundenplan (Wochenkalender)
      ----------------------------------------------------------------
-     - Karten werden anhand ihrer Berliner Uhrzeit per top/height (px)
-       absolut in der jeweiligen Tagesspalte positioniert.
      - Verschobene Termine (Name enthält "verschoben"/"verlegt"/"ersatz"/
        "ausweich") werden orange hervorgehoben statt cyan/rot.
      - Zwischen zwei Terminen desselben Tages wird ab 60 Minuten Lücke
-       automatisch ein "Hohlstunde"-Block an der passenden Stelle im
-       Raster eingeblendet.
-     - Der heutige Tag (falls in der angezeigten Woche) bekommt einen
-       farbigen Titel + dezenten Glow um die ganze Spalte.
+       automatisch ein "Hohlstunde"-Block eingefügt.
   ================================================================= */
-  function scheduleCardHtml(e, top, height) {
+  function scheduleCardHtml(e) {
     const moved = isMovedEntry(e);
     const exam = isExamEntry(e);
     const borderClass = moved ? 'border-l-flame' : exam ? 'border-l-alert' : 'border-l-signal';
     const bgClass = moved ? 'bg-flame/10' : 'bg-surface';
     return `
-      <div class="group absolute left-1 right-1 overflow-hidden rounded-lg border border-line border-l-4 ${borderClass} ${bgClass} shadow-card px-2 py-1.5"
-           style="top:${top}px; height:${height}px;">
-        ${moved ? `<span class="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wide text-flame bg-flame/15 rounded-full px-1.5 py-0.5 mb-0.5"><i data-lucide="alert-triangle" class="h-2.5 w-2.5"></i>Verschoben</span>` : ''}
-        <p class="text-[11px] font-mono text-muted truncate">${formatTime(e.startTime)}–${formatTime(e.endTime)}</p>
-        <p class="text-xs font-medium text-ink truncate">${escapeHtml(e.name)}</p>
-        <p class="text-[11px] text-muted truncate flex items-center gap-1"><i data-lucide="map-pin" class="h-2.5 w-2.5 shrink-0"></i><span class="truncate">${escapeHtml(formatRooms(e))}</span></p>
-        ${state.isAdmin ? `
-          <div class="absolute top-1 right-1 hidden group-hover:flex gap-0.5">
-            <button data-edit-entry="${e.id}" class="p-1 rounded-md bg-surface2/90 hover:bg-line text-muted hover:text-ink transition"><i data-lucide="pencil" class="h-3 w-3"></i></button>
-            <button data-delete-entry="${e.id}" class="p-1 rounded-md bg-surface2/90 hover:bg-line text-muted hover:text-alert transition"><i data-lucide="trash-2" class="h-3 w-3"></i></button>
-          </div>` : ''}
+      <div data-entry-id="${e.id}" class="entry-card rounded-xl border border-line border-l-4 ${borderClass} ${bgClass} p-3 shadow-card cursor-pointer transition hover:ring-2 hover:ring-flame/60">
+        ${moved ? `<span class="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-flame bg-flame/15 rounded-full px-2 py-0.5 mb-1.5"><i data-lucide="alert-triangle" class="h-3 w-3"></i>Verschoben</span>` : ''}
+        <p class="text-xs font-mono text-muted">${formatTime(e.startTime)} – ${formatTime(e.endTime)}</p>
+        <p class="text-sm font-medium text-ink mt-0.5">${escapeHtml(cleanCardTitle(e.name))}</p>
+        <p class="text-xs text-muted mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(formatRooms(e))}</p>
       </div>`;
   }
 
   // Dezenter Lücken-Block, wenn zwischen zwei Terminen >= 60 Minuten Pause liegen
-  function gapBlockHtml(prevEndTime, nextStartTime, top, height) {
+  function gapBlockHtml(prevEndTime, nextStartTime) {
     const gapMinutes = Math.round((new Date(nextStartTime) - new Date(prevEndTime)) / 60000);
     const hours = gapMinutes / 60;
     const label = hours === 1 ? '1 Stunde Pause' : `${hours.toLocaleString('de-DE')} Stunden Pause`;
     return `
-      <div class="absolute left-1 right-1 overflow-hidden rounded-lg border border-dashed border-line bg-surface2/30 flex flex-col items-center justify-center text-center"
-           style="top:${top}px; height:${height}px;">
-        <p class="text-[9px] uppercase tracking-wide text-muted font-mono">Hohlstunde</p>
-        <p class="text-[10px] text-muted truncate px-1">${label}</p>
+      <div class="rounded-xl border border-dashed border-line bg-surface2/30 px-3 py-2.5 text-center">
+        <p class="text-[11px] uppercase tracking-wide text-muted font-mono">Hohlstunde</p>
+        <p class="text-xs text-muted mt-0.5">${label}</p>
       </div>`;
   }
 
-  // Baut die absolut positionierten Karten + Hohlstunden-Blöcke einer Tagesspalte
-  function dayColumnEntriesHtml(dayEntries) {
+  // Baut die Kartenliste eines Tages inkl. eingestreuter Hohlstunden-Blöcke
+  function dayColumnHtml(dayEntries) {
+    if (dayEntries.length === 0) return `<p class="text-xs text-muted px-1">–</p>`;
     const blocks = [];
     dayEntries.forEach((entry, idx) => {
-      const startMin = clampMinutes(minutesFromCalendarStart(entry.startTime));
-      const endMin = clampMinutes(minutesFromCalendarStart(entry.endTime));
-      const top = (startMin / 60) * PX_PER_HOUR;
-      const height = Math.max(18, ((endMin - startMin) / 60) * PX_PER_HOUR);
-      blocks.push(scheduleCardHtml(entry, top, height));
-
+      blocks.push(scheduleCardHtml(entry));
       const next = dayEntries[idx + 1];
       if (next) {
         const gapMinutes = (new Date(next.startTime) - new Date(entry.endTime)) / 60000;
         if (gapMinutes >= 60) {
-          const gapStartMin = clampMinutes(minutesFromCalendarStart(entry.endTime));
-          const gapEndMin = clampMinutes(minutesFromCalendarStart(next.startTime));
-          const gapTop = (gapStartMin / 60) * PX_PER_HOUR;
-          const gapHeight = ((gapEndMin - gapStartMin) / 60) * PX_PER_HOUR;
-          if (gapHeight > 0) blocks.push(gapBlockHtml(entry.endTime, next.startTime, gapTop, gapHeight));
+          blocks.push(gapBlockHtml(entry.endTime, next.startTime));
         }
       }
     });
@@ -918,62 +878,35 @@
     document.getElementById('weekRangeLabel').textContent =
       `${formatIsoShort(days[0])} – ${formatIsoWithYear(days[4])}`;
 
-    // Kopfzeile: Wochentag + Datum, heutiger Tag farbig hervorgehoben
-    document.getElementById('scheduleHeaderRow').innerHTML = `<div></div>` + days.map((dayIso, idx) => {
+    const grid = document.getElementById('scheduleGrid');
+    grid.innerHTML = days.map((dayIso, idx) => {
       const isToday = dayIso === todayIso;
+      const dayEntries = state.schedule
+        .filter(e => entryDayIso(e) === dayIso)
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
       return `
-        <div class="text-center pb-2">
-          <p class="text-sm font-medium ${isToday ? 'text-flame' : 'text-ink'}">${WEEKDAYS[idx]}</p>
-          <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
+        <div class="flex flex-col gap-3">
+          <div class="flex items-baseline justify-between px-1">
+            <p class="text-sm font-medium ${isToday ? 'text-flame' : 'text-ink'}">${WEEKDAYS[idx]}</p>
+            <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
+          </div>
+          <div class="space-y-2 min-h-[2rem]">
+            ${dayColumnHtml(dayEntries)}
+          </div>
         </div>`;
     }).join('');
-
-    // Körper: Stundenleiste + 5 Tagesspalten mit gestrichelten Stundenlinien im Hintergrund
-    const hourLines = hourLinesHtml();
-    document.getElementById('scheduleBodyRow').innerHTML = `
-      <div class="relative" style="height:${CALENDAR_HEIGHT}px;">${hourRulerHtml()}</div>
-      ${days.map(dayIso => {
-        const isToday = dayIso === todayIso;
-        const dayEntries = state.schedule
-          .filter(e => entryDayIso(e) === dayIso)
-          .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-        const glowClass = isToday ? 'bg-flame/5 ring-1 ring-flame/30 shadow-[0_0_24px_-8px_rgba(242,169,59,0.35)]' : '';
-        return `
-          <div class="relative rounded-lg ${glowClass}" style="height:${CALENDAR_HEIGHT}px;">
-            ${hourLines}
-            ${dayColumnEntriesHtml(dayEntries)}
-          </div>`;
-      }).join('')}
-    `;
   }
 
   document.getElementById('prevWeekBtn').addEventListener('click', () => { state.weekOffset--; renderScheduleGrid(); lucide.createIcons(); });
   document.getElementById('nextWeekBtn').addEventListener('click', () => { state.weekOffset++; renderScheduleGrid(); lucide.createIcons(); });
-  document.getElementById('todayBtn').addEventListener('click', () => { state.weekOffset = 0; renderScheduleGrid(); lucide.createIcons(); });
 
-  // Datumsauswahl: springt zur Woche, in der das gewählte Datum liegt (bleibt Wochenansicht)
-  document.getElementById('jumpToDateInput').addEventListener('change', (e) => {
-    const picked = e.target.value;
-    if (!picked) return;
-    const baseMonday = mondayOfIso(todayInBerlin());
-    const targetMonday = mondayOfIso(picked);
-    state.weekOffset = daysBetweenIso(baseMonday, targetMonday) / 7;
-    renderScheduleGrid();
-    lucide.createIcons();
-    e.target.value = ''; // zurücksetzen, damit dasselbe Datum erneut wählbar bleibt
-  });
-
-  // Klick-Delegation für dynamisch erzeugte Bearbeiten-/Löschen-Buttons
-  document.getElementById('scheduleBodyRow').addEventListener('click', (e) => {
-    const editBtn = e.target.closest('[data-edit-entry]');
-    const delBtn = e.target.closest('[data-delete-entry]');
-    if (editBtn) {
-      const entry = state.schedule.find(x => String(x.id) === editBtn.dataset.editEntry);
-      if (entry) openScheduleModal(entry);
-    }
-    if (delBtn) {
-      if (confirm('Diesen Termin wirklich löschen?')) deleteScheduleEntry(delBtn.dataset.deleteEntry);
-    }
+  // Klick auf eine Kalenderkarte öffnet die vollständige Detail-Ansicht
+  document.getElementById('scheduleGrid').addEventListener('click', (e) => {
+    const card = e.target.closest('[data-entry-id]');
+    if (!card) return;
+    const entry = state.schedule.find(x => String(x.id) === card.dataset.entryId);
+    if (entry) openEntryDetailModal(entry);
   });
 
   /* ---------------- Admin-Modal: Termin hinzufügen / bearbeiten ---------------- */
@@ -1008,6 +941,49 @@
     if (id) await updateScheduleEntry(id, entry);
     else await addScheduleEntry(entry);
     closeScheduleModal();
+  });
+
+  /* ---------------- Detail-Modal: vollständige Termin-Ansicht ---------------- */
+  const entryDetailModal = document.getElementById('entryDetailModal');
+  let currentDetailEntry = null;
+
+  function openEntryDetailModal(entry) {
+    currentDetailEntry = entry;
+    document.getElementById('detailName').textContent = entry.name;
+    document.getElementById('detailTime').textContent = `${formatTime(entry.startTime)} - ${formatTime(entry.endTime)} Uhr`;
+    document.getElementById('detailRooms').innerHTML = entry.rooms__002
+      ? `<p>Hauptraum: ${escapeHtml(entry.rooms__001)}</p><p class="mt-0.5">Nebenraum: ${escapeHtml(entry.rooms__002)}</p>`
+      : `<p>${escapeHtml(entry.rooms__001)}</p>`;
+
+    document.getElementById('detailMovedBadge').classList.toggle('hidden', !isMovedEntry(entry));
+
+    const adminActions = document.getElementById('detailAdminActions');
+    adminActions.classList.toggle('hidden', !state.isAdmin);
+    adminActions.classList.toggle('flex', state.isAdmin);
+
+    entryDetailModal.classList.remove('hidden');
+    lucide.createIcons();
+  }
+  function closeEntryDetailModal() {
+    entryDetailModal.classList.add('hidden');
+    currentDetailEntry = null;
+  }
+
+  document.getElementById('entryDetailClose').addEventListener('click', closeEntryDetailModal);
+  entryDetailModal.addEventListener('click', (e) => { if (e.target === entryDetailModal) closeEntryDetailModal(); });
+
+  document.getElementById('detailEditBtn').addEventListener('click', () => {
+    const entry = currentDetailEntry;
+    closeEntryDetailModal();
+    if (entry) openScheduleModal(entry);
+  });
+  document.getElementById('detailDeleteBtn').addEventListener('click', () => {
+    const entry = currentDetailEntry;
+    if (!entry) return;
+    if (confirm('Diesen Termin wirklich löschen?')) {
+      closeEntryDetailModal();
+      deleteScheduleEntry(entry.id);
+    }
   });
 
   /* ================================================================
@@ -1166,6 +1142,8 @@
     document.getElementById('sidebarCourse').textContent = CONFIG.courseName;
     document.getElementById('todayLabel').textContent =
       new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: DASHBOARD_TIMEZONE });
+    document.getElementById('connectionBadge').classList.toggle('hidden', isSupabaseConfigured);
+
     state.schedule = await loadSchedule();
     state.modules = await loadModules();
 

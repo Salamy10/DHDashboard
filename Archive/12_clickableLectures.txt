@@ -1,0 +1,22 @@
+Das Kalender-Raster sieht super aus! Allerdings gibt es jetzt ein Platzproblem: Durch das feste Zeitraster werden lange Vorlesungsnamen und Räume in den Karten unschön abgeschnitten. 
+Bitte löse das Problem durch die folgenden 3 Anpassungen in der `index.html`:
+### 1. Text-Bereinigung (String Manipulation) für die Kalender-Ansicht
+Um Platz in den kleinen Karten zu sparen, sollen irrelevante Füllwörter ausgeblendet werden.
+- Bevor der Titel in der Kalenderkarte gerendert wird, entferne per JavaScript automatisch Wörter wie "Vorlesung", "Verschobene", "Verschobener" oder "Verschoben" (case-insensitive) sowie eventuelle überflüssige Leerzeichen am Anfang.
+- *Beispiel:* Aus "Verschobene Vorlesung Grundlagen IT" wird in der Karten-Ansicht einfach "Grundlagen IT". 
+- (Hinweis: Ändere die Daten nicht in der Datenbank, sondern nur den String, der im Grid angezeigt wird).
+### 2. Klickbare Detail-Ansicht (Modal)
+Damit man trotzdem alle Daten sehen kann, bauen wir eine Ausklapp-Funktion ein.
+- Mache alle Termin-Karten im Kalender klickbar (`cursor-pointer` und z.B. `hover:ring-2 hover:ring-brand-500 transition`).
+- Wenn man auf einen Termin klickt, öffnet sich ein zentriertes Modal (Overlay) im modernen Dark-Mode-Stil über dem restlichen Inhalt (mit leicht abgedunkeltem Hintergrund).
+- Dieses Modal zeigt alle Informationen **vollständig und ungekürzt** an:
+  - Den kompletten, originalen `name` aus der Datenbank (inkl. "Vorlesung" etc.).
+  - Die genaue Start- und Endzeit (z.B. "08:00 - 10:30 Uhr").
+  - Alle verfügbaren Räume komplett ausgeschrieben.
+  - Ein prominentes Warn-Badge, falls der Termin verschoben ist.
+- Das Modal braucht einen Schließen-Button ("X" oben rechts oder Klick auf den Hintergrund zum Schließen).
+### 3. Aufräumen der Admin-Buttons
+Aktuell nehmen die "Bearbeiten"- und "Löschen"-Buttons im Admin-Modus wertvollen Platz in der Termin-Karte weg.
+- Verschiebe diese Buttons aus der kleinen Kalender-Karte in das neue Detail-Modal.
+- Wenn `isAdmin === true` ist, tauchen unten im Detail-Modal zwei schöne Buttons auf: "Termin bearbeiten" und "Termin löschen". In der reinen Wochenansicht sieht der Admin somit denselben aufgeräumten Kalender wie ein normaler User.
+Bitte gib mir den aktualisierten Code für die `index.html` zurück, der diese Bereinigungen und das neue Termin-Modal enthält.
