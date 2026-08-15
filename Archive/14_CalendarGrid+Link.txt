@@ -1,0 +1,30 @@
+Das Dashboard funktioniert super! Jetzt möchte ich die Usability des Kalenders deutlich verbessern und einen neuen Link einpflegen. Bitte überarbeite den HTML/JS-Code der `index.html` anhand der folgenden 4 Punkte:
+1. Neuen Link hinzufügen
+Füge in der Sektion "Links" unter der Kategorie "Cloud" an erster Stelle (ganz oben in dieser Kategorie) folgenden neuen Link hinzu:
+
+* Name: `WI Are Family - Filen`
+* URL: `https://app.filen.io/#/f/bdcc7988-5979-448b-859c-2ae8fe801622%2354626969725032783863626d3969366377736a74374e5168443332466271536c`
+* (Öffnet natürlich auch im neuen Tab `target="_blank"`).
+
+2. Kalender-Navigation & Aktueller Tag
+
+* Hervorhebung "Heute": Der aktuelle Tag (falls er in der angezeigten Woche liegt) soll visuell deutlich im Kalender hervorgehoben werden (z. B. durch eine leuchtende Umrandung der Spalte, einen farbigen Tagestitel oder einen subtilen Hintergrund-Glow im Dark-Mode). Ich überlasse das genaue Styling dir.
+* "Heute"-Button: Füge neben den "Vor/Zurück"-Buttons für die Wochennavigation einen "Heute"-Button hinzu, der den Kalender sofort wieder auf die aktuelle Woche zurückspringen lässt.
+* Datumsauswahl (Datepicker): Baue zusätzlich ein `<input type="date">` (oder ein ähnliches schickes Auswahl-Icon) in die Kalender-Kopfzeile ein. Wählt der Nutzer dort ein Datum aus, soll der Kalender zu genau der Woche springen, in der dieses Datum liegt. Die Ansicht bleibt weiterhin eine Wochenansicht.
+
+3. Festes Zeitraster im Kalender (08:00 bis 20:00 Uhr)
+Bisher wurden die Vorlesungen einfach untereinander aufgelistet. Das soll sich nun in einen echten Zeitachsen-Kalender ändern:
+
+* Erstelle ein festes Grid/Raster für die Stunden von 08:00 bis 20:00 Uhr.
+* Zeichne im Hintergrund subtile, gestrichelte horizontale Linien (z. B. `border-dashed border-slate-700`) für jede volle Stunde über die gesamte Woche.
+* Rendering-Logik: Die einzelnen Vorlesungskarten müssen nun per JavaScript basierend auf ihrer `startTime` und `endTime` in ihrer jeweiligen Tages-Spalte vertikal (absolut) positioniert werden.
+   * Beispiel: Wenn 1 Stunde = 60 Pixel entspricht, muss eine Vorlesung von 10:00 bis 11:30 Uhr genau auf Höhe der 10-Uhr-Linie starten und 90 Pixel hoch sein.
+* Passe den Text innerhalb der Terminkarten so an, dass er auch bei kürzeren Terminen nicht überläuft (z. B. mit `overflow-hidden`, `text-ellipsis` etc.).
+
+4. Debug-Meldungen aufräumen
+Ganz oben oder im Banner gibt es noch eine Meldung/Anzeige, dass "Supabase nicht verbunden" sei oder Dummy-Daten geladen werden.
+
+* Entferne diese Fehlermeldung/Warnung vollständig aus dem HTML- und JS-Code, da die echte Datenbank jetzt live verbunden ist und dieser Text nicht mehr gebraucht wird. Bitte gib mir den vollständig aktualisierten Code für die `index.html` zurück, in dem alle bestehenden Funktionen erhalten bleiben und diese neuen UI/UX-Verbesserungen integriert sind.
+
+5. WICHTIG - Bestehende Features behalten:
+Behalte die neu eingebaute Logik für das Termin-Detail-Modal (Öffnen bei Klick auf Termin) sowie die automatische Titel-Bereinigung (Entfernen von Wörter wie "Vorlesung", "Verschoben" & Doppelpunkten in der Grid-Ansicht) aus dem aktuellen Code unbedingt bei!

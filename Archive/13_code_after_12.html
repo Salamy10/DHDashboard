@@ -165,6 +165,7 @@
           </h2>
           <p class="text-sm text-muted mt-1" id="todayLabel"></p>
         </div>
+        <span id="connectionBadge" class="hidden sm:inline-flex text-[10px] uppercase tracking-wide text-alert border border-alert/40 rounded-full px-2.5 py-1" title="Bitte SUPABASE_URL und SUPABASE_ANON_KEY im Script-Bereich der index.html eintragen.">Supabase nicht verbunden</span>
       </div>
 
       <!-- Live / Als Nächstes (Signatur-Element) -->
@@ -214,7 +215,7 @@
           <i data-lucide="calendar-days" class="h-5 w-5 text-flame"></i>
           Stundenplan
         </h2>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-3">
           <div class="flex items-center gap-1 rounded-lg border border-line bg-surface p-1">
             <button id="prevWeekBtn" class="p-1.5 rounded-md hover:bg-surface2 text-muted hover:text-ink transition" aria-label="Vorherige Woche">
               <i data-lucide="chevron-left" class="h-4 w-4"></i>
@@ -224,32 +225,12 @@
               <i data-lucide="chevron-right" class="h-4 w-4"></i>
             </button>
           </div>
-          <button id="todayWeekBtn" class="rounded-lg border border-line bg-surface px-3 py-2 text-xs font-medium text-muted hover:text-ink hover:bg-surface2 transition">
-            Heute
-          </button>
-          <label class="relative flex items-center justify-center h-[34px] w-[34px] rounded-lg border border-line bg-surface hover:bg-surface2 transition cursor-pointer" title="Datum auswählen">
-            <i data-lucide="calendar" class="h-4 w-4 text-muted pointer-events-none"></i>
-            <input id="weekDatePicker" type="date" class="absolute inset-0 h-full w-full opacity-0 cursor-pointer">
-          </label>
           <button id="addEntryBtn" class="hidden items-center gap-1.5 rounded-lg bg-flame text-canvas text-sm font-medium px-3 py-2 hover:bg-flame/90 transition">
             <i data-lucide="plus" class="h-4 w-4"></i> Termin
           </button>
         </div>
       </div>
-      <div id="scheduleGrid" class="rounded-2xl border border-line bg-surface shadow-card overflow-hidden">
-        <div class="overflow-x-auto">
-          <div style="min-width: 760px;">
-            <div class="flex border-b border-line">
-              <div class="w-14 shrink-0"></div>
-              <div id="dayHeaders" class="flex-1 grid grid-cols-5 divide-x divide-line"></div>
-            </div>
-            <div class="flex">
-              <div id="hourGutter" class="w-14 shrink-0 relative"></div>
-              <div id="dayColumns" class="flex-1 grid grid-cols-5"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div id="scheduleGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
     </section>
 
     <!-- ---------- C) MODULE ---------- -->
@@ -499,23 +480,6 @@
   function formatDateDe(dtStr) {
     return new Date(dtStr).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: DASHBOARD_TIMEZONE });
   }
-  // Minuten seit Mitternacht, ausgewertet in Berliner Ortszeit (für die Grid-Positionierung)
-  function minutesSinceMidnightInTz(date, timeZone = DASHBOARD_TIMEZONE) {
-    const dtf = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' });
-    const parts = dtf.formatToParts(date).reduce((acc, p) => {
-      if (p.type !== 'literal') acc[p.type] = p.value;
-      return acc;
-    }, {});
-    return Number(parts.hour) * 60 + Number(parts.minute);
-  }
-
-  /* ================================================================
-     ZEITRASTER-KONSTANTEN (Kalender-Ansicht 08:00–20:00 Uhr)
-  ================================================================= */
-  const CALENDAR_START_HOUR = 8;
-  const CALENDAR_END_HOUR = 20;
-  const PIXELS_PER_HOUR = 60;
-  const CALENDAR_HEIGHT = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * PIXELS_PER_HOUR;
 
   /* ================================================================
      KALENDER-TAGES-ARITHMETIK (reine "YYYY-MM-DD"-String-Rechnung)
@@ -604,7 +568,6 @@
       title: 'Cloud',
       icon: 'cloud',
       links: [
-        { label: 'WI Are Family - Filen', href: 'https://app.filen.io/#/f/bdcc7988-5979-448b-859c-2ae8fe801622%2354626969725032783863626d3969366377736a74374e5168443332466271536c' },
         { label: 'WWIBE225', href: 'https://drive.google.com/drive/folders/1Yr5x0twGJTGS0xy_N4yc3UsunUbb0S0G?usp=drive_link' },
         { label: 'Altklausuren - Grundlagen IT', href: 'https://drive.google.com/drive/folders/1JW6NShPnTgJn-mIZ1tZMv97n05TmSKjX' },
         { label: 'WI are family Dropbox', href: 'https://www.dropbox.com/scl/fo/wp8syw6htebl3ga2mbkp1/AGGGwph0YR9kIjTNpxvVejg?rlkey=147jxq1qdn8wdwelajetprb3i&st=9ze0eptn&e=2&dl=0' },
@@ -856,74 +819,54 @@
   });
 
   /* ================================================================
-     RENDER: Stundenplan (Zeitachsen-Kalender, 08:00–20:00 Uhr)
+     RENDER: Stundenplan (Wochenkalender)
      ----------------------------------------------------------------
-     - Termine werden per startTime/endTime absolut im Raster positioniert
-       (siehe entryVerticalStyle) statt einfach untereinander aufgelistet.
-       Pausen zwischen Terminen sind dadurch als leere Fläche direkt sichtbar.
      - Verschobene Termine (Name enthält "verschoben"/"verlegt"/"ersatz"/
        "ausweich") werden orange hervorgehoben statt cyan/rot.
+     - Zwischen zwei Terminen desselben Tages wird ab 60 Minuten Lücke
+       automatisch ein "Hohlstunde"-Block eingefügt.
   ================================================================= */
-  // Berechnet top/height (in Pixel) für die absolute Positionierung im Zeitraster,
-  // geklammert auf den sichtbaren Bereich 08:00–20:00 Uhr.
-  function entryVerticalStyle(e) {
-    const gridStartMinutes = CALENDAR_START_HOUR * 60;
-    const startMinutes = minutesSinceMidnightInTz(new Date(e.startTime));
-    const endMinutes = minutesSinceMidnightInTz(new Date(e.endTime));
-    const topRaw = (startMinutes - gridStartMinutes) / 60 * PIXELS_PER_HOUR;
-    const bottomRaw = (endMinutes - gridStartMinutes) / 60 * PIXELS_PER_HOUR;
-    const top = Math.min(Math.max(topRaw, 0), CALENDAR_HEIGHT);
-    const bottom = Math.min(Math.max(bottomRaw, 0), CALENDAR_HEIGHT);
-    const height = Math.max(24, bottom - top); // Mindesthöhe, damit auch kurze Termine klickbar/lesbar bleiben
-    return `top:${top}px; height:${height}px;`;
-  }
-
   function scheduleCardHtml(e) {
     const moved = isMovedEntry(e);
     const exam = isExamEntry(e);
     const borderClass = moved ? 'border-l-flame' : exam ? 'border-l-alert' : 'border-l-signal';
     const bgClass = moved ? 'bg-flame/10' : 'bg-surface';
     return `
-      <div data-entry-id="${e.id}" class="entry-card absolute left-1 right-1 rounded-lg border border-line border-l-4 ${borderClass} ${bgClass} px-2 py-1 shadow-card cursor-pointer overflow-hidden leading-tight transition hover:ring-2 hover:ring-flame/60 hover:z-20" style="${entryVerticalStyle(e)}">
-        ${moved ? `<span class="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-flame" title="Verschoben"></span>` : ''}
-        <p class="text-[10px] font-mono text-muted truncate">${formatTime(e.startTime)}–${formatTime(e.endTime)}</p>
-        <p class="text-xs font-medium text-ink truncate">${escapeHtml(cleanCardTitle(e.name))}</p>
-        <p class="text-[10px] text-muted truncate flex items-center gap-1">
-          <i data-lucide="map-pin" class="h-2.5 w-2.5 shrink-0"></i><span class="truncate">${escapeHtml(formatRooms(e))}</span>
-        </p>
+      <div data-entry-id="${e.id}" class="entry-card rounded-xl border border-line border-l-4 ${borderClass} ${bgClass} p-3 shadow-card cursor-pointer transition hover:ring-2 hover:ring-flame/60">
+        ${moved ? `<span class="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wide text-flame bg-flame/15 rounded-full px-2 py-0.5 mb-1.5"><i data-lucide="alert-triangle" class="h-3 w-3"></i>Verschoben</span>` : ''}
+        <p class="text-xs font-mono text-muted">${formatTime(e.startTime)} – ${formatTime(e.endTime)}</p>
+        <p class="text-sm font-medium text-ink mt-0.5">${escapeHtml(cleanCardTitle(e.name))}</p>
+        <p class="text-xs text-muted mt-1 flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i>${escapeHtml(formatRooms(e))}</p>
       </div>`;
   }
 
-  // Gestrichelte Stundenlinien im Hintergrund jeder Tagesspalte
-  function hourLinesHtml() {
-    let html = '';
-    for (let h = CALENDAR_START_HOUR; h <= CALENDAR_END_HOUR; h++) {
-      const top = (h - CALENDAR_START_HOUR) * PIXELS_PER_HOUR;
-      html += `<div class="absolute left-0 right-0 border-t border-dashed border-line/70" style="top:${top}px"></div>`;
-    }
-    return html;
-  }
-  // Stunden-Beschriftungen links neben dem Raster
-  function hourGutterHtml() {
-    let html = '';
-    for (let h = CALENDAR_START_HOUR; h <= CALENDAR_END_HOUR; h++) {
-      const top = (h - CALENDAR_START_HOUR) * PIXELS_PER_HOUR;
-      html += `<div class="absolute right-2 text-[10px] font-mono text-muted" style="top:${top}px; transform: translateY(-50%)">${String(h).padStart(2, '0')}:00</div>`;
-    }
-    return html;
-  }
-  // Dünne "Jetzt"-Linie, nur auf der heutigen Spalte und nur innerhalb 08:00–20:00 Uhr
-  function nowLineHtml(dayIso) {
-    if (dayIso !== todayInBerlin()) return '';
-    const nowMinutes = minutesSinceMidnightInTz(new Date());
-    const gridStartMinutes = CALENDAR_START_HOUR * 60, gridEndMinutes = CALENDAR_END_HOUR * 60;
-    if (nowMinutes < gridStartMinutes || nowMinutes > gridEndMinutes) return '';
-    const top = (nowMinutes - gridStartMinutes) / 60 * PIXELS_PER_HOUR;
+  // Dezenter Lücken-Block, wenn zwischen zwei Terminen >= 60 Minuten Pause liegen
+  function gapBlockHtml(prevEndTime, nextStartTime) {
+    const gapMinutes = Math.round((new Date(nextStartTime) - new Date(prevEndTime)) / 60000);
+    const hours = gapMinutes / 60;
+    const label = hours === 1 ? '1 Stunde Pause' : `${hours.toLocaleString('de-DE')} Stunden Pause`;
     return `
-      <div class="absolute left-0 right-0 z-10 pointer-events-none" style="top:${top}px">
-        <div class="absolute -left-1 -top-[3px] h-[6px] w-[6px] rounded-full bg-flame"></div>
-        <div class="h-px bg-flame"></div>
+      <div class="rounded-xl border border-dashed border-line bg-surface2/30 px-3 py-2.5 text-center">
+        <p class="text-[11px] uppercase tracking-wide text-muted font-mono">Hohlstunde</p>
+        <p class="text-xs text-muted mt-0.5">${label}</p>
       </div>`;
+  }
+
+  // Baut die Kartenliste eines Tages inkl. eingestreuter Hohlstunden-Blöcke
+  function dayColumnHtml(dayEntries) {
+    if (dayEntries.length === 0) return `<p class="text-xs text-muted px-1">–</p>`;
+    const blocks = [];
+    dayEntries.forEach((entry, idx) => {
+      blocks.push(scheduleCardHtml(entry));
+      const next = dayEntries[idx + 1];
+      if (next) {
+        const gapMinutes = (new Date(next.startTime) - new Date(entry.endTime)) / 60000;
+        if (gapMinutes >= 60) {
+          blocks.push(gapBlockHtml(entry.endTime, next.startTime));
+        }
+      }
+    });
+    return blocks.join('');
   }
 
   function renderScheduleGrid() {
@@ -934,50 +877,26 @@
 
     document.getElementById('weekRangeLabel').textContent =
       `${formatIsoShort(days[0])} – ${formatIsoWithYear(days[4])}`;
-    document.getElementById('weekDatePicker').value = monday;
 
-    // Kopfzeile: Wochentag + Datum, "heute" wird farblich + mit Hintergrund hervorgehoben
-    document.getElementById('dayHeaders').innerHTML = days.map((dayIso, idx) => {
+    const grid = document.getElementById('scheduleGrid');
+    grid.innerHTML = days.map((dayIso, idx) => {
       const isToday = dayIso === todayIso;
-      return `
-        <div class="px-2 py-3 text-center ${isToday ? 'bg-flame/10' : ''}">
-          <p class="text-sm font-medium ${isToday ? 'text-flame' : 'text-ink'}">${WEEKDAYS[idx]}</p>
-          <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
-        </div>`;
-    }).join('');
+      const dayEntries = state.schedule
+        .filter(e => entryDayIso(e) === dayIso)
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
-    // Stunden-Beschriftung links (einmal, da für alle Tage identisch)
-    document.getElementById('hourGutter').style.height = CALENDAR_HEIGHT + 'px';
-    document.getElementById('hourGutter').innerHTML = hourGutterHtml();
-
-    // Tagesspalten: Stundenlinien im Hintergrund + absolut positionierte Termine
-    document.getElementById('dayColumns').innerHTML = days.map(dayIso => {
-      const isToday = dayIso === todayIso;
-      const dayEntries = state.schedule.filter(e => entryDayIso(e) === dayIso);
-      const columnRing = isToday ? 'bg-flame/5 ring-1 ring-inset ring-flame/30' : '';
       return `
-        <div class="relative border-l border-line ${columnRing}" style="height:${CALENDAR_HEIGHT}px">
-          ${hourLinesHtml()}
-          ${nowLineHtml(dayIso)}
-          ${dayEntries.map(scheduleCardHtml).join('')}
+        <div class="flex flex-col gap-3">
+          <div class="flex items-baseline justify-between px-1">
+            <p class="text-sm font-medium ${isToday ? 'text-flame' : 'text-ink'}">${WEEKDAYS[idx]}</p>
+            <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
+          </div>
+          <div class="space-y-2 min-h-[2rem]">
+            ${dayColumnHtml(dayEntries)}
+          </div>
         </div>`;
     }).join('');
   }
-
-  document.getElementById('todayWeekBtn').addEventListener('click', () => {
-    state.weekOffset = 0;
-    renderScheduleGrid();
-    lucide.createIcons();
-  });
-  document.getElementById('weekDatePicker').addEventListener('change', (e) => {
-    const picked = e.target.value;
-    if (!picked) return;
-    const baseMonday = mondayOfIso(todayInBerlin());
-    const pickedMonday = mondayOfIso(picked);
-    state.weekOffset = daysBetweenIso(baseMonday, pickedMonday) / 7;
-    renderScheduleGrid();
-    lucide.createIcons();
-  });
 
   document.getElementById('prevWeekBtn').addEventListener('click', () => { state.weekOffset--; renderScheduleGrid(); lucide.createIcons(); });
   document.getElementById('nextWeekBtn').addEventListener('click', () => { state.weekOffset++; renderScheduleGrid(); lucide.createIcons(); });
@@ -1223,13 +1142,14 @@
     document.getElementById('sidebarCourse').textContent = CONFIG.courseName;
     document.getElementById('todayLabel').textContent =
       new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: DASHBOARD_TIMEZONE });
+    document.getElementById('connectionBadge').classList.toggle('hidden', isSupabaseConfigured);
 
     state.schedule = await loadSchedule();
     state.modules = await loadModules();
 
     updateAdminUI();
     renderAll();
-    setInterval(() => { renderLiveCard(); renderScheduleGrid(); lucide.createIcons(); }, 30000); // Live-Karte & Jetzt-Linie alle 30s aktualisieren
+    setInterval(renderLiveCard, 30000); // Live-Karte alle 30s aktualisieren
   }
 
   document.addEventListener('DOMContentLoaded', init);
