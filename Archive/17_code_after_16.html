@@ -236,16 +236,16 @@
           </button>
         </div>
       </div>
-	  <div id="scheduleGrid" class="rounded-2xl border border-line bg-surface shadow-card overflow-x-auto">
-	    <div class="flex border-b border-line h-14">
-	      <div class="w-14 shrink-0"></div>
-	      <div id="dayHeaders" class="flex-1 grid grid-cols-5 divide-x divide-line min-w-[700px]"></div>
-	    </div>
-	    <div class="flex">
-	      <div id="hourGutter" class="w-14 shrink-0 relative"></div>
-	      <div id="dayColumns" class="flex-1 grid grid-cols-5 min-w-[700px]"></div>
-	    </div>
-	  </div>
+      <div id="scheduleGrid" class="rounded-2xl border border-line bg-surface shadow-card overflow-hidden">
+        <div class="flex border-b border-line h-14">
+          <div class="w-14 shrink-0"></div>
+          <div id="dayHeaders" class="flex-1 grid grid-cols-5 divide-x divide-line"></div>
+        </div>
+        <div class="flex overflow-hidden">
+          <div id="hourGutter" class="w-14 shrink-0 relative"></div>
+          <div id="dayColumns" class="flex-1 grid grid-cols-5 overflow-hidden"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ---------- C) MODULE ---------- -->
@@ -530,11 +530,23 @@
      sondern bei jedem Rendern neu berechnet (updateCalendarLayout),
      damit das komplette Raster ohne Scrollen in den Viewport passt.
   ================================================================= */
-  // NEU:
   const CALENDAR_START_HOUR = 8;
   const CALENDAR_END_HOUR = 20;
-  const PIXELS_PER_HOUR = 60; // fester Wert, keine dynamische Berechnung mehr
-  const CALENDAR_HEIGHT = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * PIXELS_PER_HOUR;
+  const HEADER_ROW_HEIGHT = 56;   // px — muss zur h-14-Klasse der Kopfzeile passen
+  const CALENDAR_BOTTOM_MARGIN = 16; // px Sicherheitsabstand zum unteren Viewport-Rand
+  let PIXELS_PER_HOUR = 48;      // Startwert, wird sofort überschrieben
+  let CALENDAR_HEIGHT = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * PIXELS_PER_HOUR;
+
+  // Berechnet PIXELS_PER_HOUR/CALENDAR_HEIGHT so, dass das gesamte Raster
+  // (08:00–20:00 Uhr) exakt in den verbleibenden, sichtbaren Viewport-Bereich passt.
+  function updateCalendarLayout() {
+    const container = document.getElementById('scheduleGrid');
+    const totalHours = CALENDAR_END_HOUR - CALENDAR_START_HOUR;
+    const top = container.getBoundingClientRect().top;
+    const available = window.innerHeight - top - HEADER_ROW_HEIGHT - CALENDAR_BOTTOM_MARGIN;
+    PIXELS_PER_HOUR = Math.max(18, Math.floor(available / totalHours));
+    CALENDAR_HEIGHT = PIXELS_PER_HOUR * totalHours;
+  }
 
   /* ================================================================
      KALENDER-TAGES-ARITHMETIK (reine "YYYY-MM-DD"-String-Rechnung)
@@ -974,6 +986,8 @@
   }
 
   function renderScheduleGrid() {
+    updateCalendarLayout();
+
     const baseMonday = mondayOfIso(todayInBerlin());
     const monday = addDaysToIso(baseMonday, state.weekOffset * 7);
     const days = [0, 1, 2, 3, 4].map(i => addDaysToIso(monday, i));

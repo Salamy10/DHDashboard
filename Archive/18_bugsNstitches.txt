@@ -1,0 +1,10 @@
+Der Kalender hat aktuell zwei responsive Fehler. Da ich Token sparen möchte, gib mir bitte NUR die HTML/JS-Schnipsel zurück, die ich austauschen muss (keine komplette Datei).
+**Ursache der Fehler:**
+1. Die Funktion `updateCalendarLayout()` nutzt `getBoundingClientRect().top`, was sich beim Scrollen der Seite ändert und die vertikale Kalendergröße dynamisch verzerrt.
+2. Auf mobilen Geräten ist der Kalender horizontal gequetscht, da `overflow-hidden` genutzt wird und die 5 Tage sich in die Handybreite zwängen.
+**Bitte generiere Snippets für diese 2 Anpassungen:**
+1. **Statisches Zeitraster (JavaScript):**
+- Ändere die Funktion `updateCalendarLayout()` so ab, dass `PIXELS_PER_HOUR` wieder ein fester, statischer Wert ist (z. B. 50 oder 60). Die dynamische Berechnung mit `window.innerHeight` und `getBoundingClientRect` muss komplett raus. Der Kalender soll eine feste, unveränderliche Höhe haben.
+2. **Horizontales Scrollen auf Mobile (HTML):**
+- Tausche beim Container `<div id="scheduleGrid">` das `overflow-hidden` gegen `overflow-x-auto` aus.
+- Gib den inneren Containern (`#dayHeaders` und `#dayColumns`) eine Mindestbreite per Tailwind (z. B. `min-w-[700px]`), damit die 5 Spalten auf dem Handy nicht gequetscht werden, sondern man wie gewohnt nach links und rechts wischen kann.
