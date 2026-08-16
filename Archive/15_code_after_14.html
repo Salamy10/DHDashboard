@@ -237,13 +237,17 @@
         </div>
       </div>
       <div id="scheduleGrid" class="rounded-2xl border border-line bg-surface shadow-card overflow-hidden">
-        <div class="flex border-b border-line h-14">
-          <div class="w-14 shrink-0"></div>
-          <div id="dayHeaders" class="flex-1 grid grid-cols-5 divide-x divide-line"></div>
-        </div>
-        <div class="flex overflow-hidden">
-          <div id="hourGutter" class="w-14 shrink-0 relative"></div>
-          <div id="dayColumns" class="flex-1 grid grid-cols-5 overflow-hidden"></div>
+        <div class="overflow-x-auto">
+          <div style="min-width: 760px;">
+            <div class="flex border-b border-line">
+              <div class="w-14 shrink-0"></div>
+              <div id="dayHeaders" class="flex-1 grid grid-cols-5 divide-x divide-line"></div>
+            </div>
+            <div class="flex">
+              <div id="hourGutter" class="w-14 shrink-0 relative"></div>
+              <div id="dayColumns" class="flex-1 grid grid-cols-5"></div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -381,24 +385,6 @@
     </div>
   </div>
 
-  <!-- ============================================================
-       MODAL: Persönliche Modul-Notizen (nur lokal, localStorage)
-  ============================================================= -->
-  <div id="moduleNotesModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="w-full max-w-md rounded-2xl bg-surface border border-line shadow-card p-6">
-      <div class="flex items-start justify-between gap-3 mb-1">
-        <h3 id="notesModuleName" class="font-display text-lg text-ink font-semibold leading-snug"></h3>
-        <button id="moduleNotesClose" class="text-muted hover:text-ink transition shrink-0" aria-label="Schließen">
-          <i data-lucide="x" class="h-5 w-5"></i>
-        </button>
-      </div>
-      <p class="text-xs text-muted mb-3">Persönliche Notiz — nur lokal in diesem Browser gespeichert.</p>
-      <textarea id="moduleNotesTextarea" rows="8" placeholder="Notizen, Fragen, Erinnerungen…"
-        class="w-full rounded-lg bg-surface2 border border-line px-3 py-2.5 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-flame/50 resize-none"></textarea>
-      <button id="moduleNotesSave" class="w-full mt-4 rounded-lg bg-flame text-canvas font-medium text-sm py-2.5 hover:bg-flame/90 transition">Speichern</button>
-    </div>
-  </div>
-
   <script>
   /* ================================================================
      KONFIGURATION — hier Kursname etc. anpassen
@@ -525,28 +511,11 @@
 
   /* ================================================================
      ZEITRASTER-KONSTANTEN (Kalender-Ansicht 08:00–20:00 Uhr)
-     ----------------------------------------------------------------
-     PIXELS_PER_HOUR/CALENDAR_HEIGHT werden NICHT fest verdrahtet,
-     sondern bei jedem Rendern neu berechnet (updateCalendarLayout),
-     damit das komplette Raster ohne Scrollen in den Viewport passt.
   ================================================================= */
   const CALENDAR_START_HOUR = 8;
   const CALENDAR_END_HOUR = 20;
-  const HEADER_ROW_HEIGHT = 56;   // px — muss zur h-14-Klasse der Kopfzeile passen
-  const CALENDAR_BOTTOM_MARGIN = 16; // px Sicherheitsabstand zum unteren Viewport-Rand
-  let PIXELS_PER_HOUR = 48;      // Startwert, wird sofort überschrieben
-  let CALENDAR_HEIGHT = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * PIXELS_PER_HOUR;
-
-  // Berechnet PIXELS_PER_HOUR/CALENDAR_HEIGHT so, dass das gesamte Raster
-  // (08:00–20:00 Uhr) exakt in den verbleibenden, sichtbaren Viewport-Bereich passt.
-  function updateCalendarLayout() {
-    const container = document.getElementById('scheduleGrid');
-    const totalHours = CALENDAR_END_HOUR - CALENDAR_START_HOUR;
-    const top = container.getBoundingClientRect().top;
-    const available = window.innerHeight - top - HEADER_ROW_HEIGHT - CALENDAR_BOTTOM_MARGIN;
-    PIXELS_PER_HOUR = Math.max(18, Math.floor(available / totalHours));
-    CALENDAR_HEIGHT = PIXELS_PER_HOUR * totalHours;
-  }
+  const PIXELS_PER_HOUR = 60;
+  const CALENDAR_HEIGHT = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * PIXELS_PER_HOUR;
 
   /* ================================================================
      KALENDER-TAGES-ARITHMETIK (reine "YYYY-MM-DD"-String-Rechnung)
@@ -564,17 +533,6 @@
     const { y, m, d } = parseIsoDateParts(iso);
     const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Sonntag
     return addDaysToIso(iso, (day === 0 ? -6 : 1) - day);
-  }
-  // Wochentag eines "YYYY-MM-DD"-Datums: 0 = Sonntag, 1 = Montag, ..., 6 = Samstag
-  function isoWeekday(iso) {
-    const { y, m, d } = parseIsoDateParts(iso);
-    return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  }
-  // Liegt "heute" (Berliner Zeit) auf einem Wochenende, springt die Standard-Ansicht
-  // direkt auf die kommende Woche (Montag–Freitag), statt eine leere Woche zu zeigen.
-  function getDefaultWeekOffset() {
-    const weekday = isoWeekday(todayInBerlin());
-    return (weekday === 0 || weekday === 6) ? 1 : 0;
   }
   function daysBetweenIso(isoA, isoB) {
     const a = parseIsoDateParts(isoA), b = parseIsoDateParts(isoB);
@@ -692,29 +650,12 @@
     localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(state.todos));
   }
 
-  // Persönliche Notizen zu Modulen — rein lokal, verknüpft über die Modul-ID.
-  // Format: { "<moduleId>": "Notiztext", ... }
-  const MODULE_NOTES_STORAGE_KEY = 'dhbw_dashboard_module_notes';
-
-  function loadModuleNotes() {
-    try {
-      const raw = localStorage.getItem(MODULE_NOTES_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }
-  function saveModuleNotes(notes) {
-    localStorage.setItem(MODULE_NOTES_STORAGE_KEY, JSON.stringify(notes));
-  }
-
   const state = {
     isAdmin: false,
-    weekOffset: getDefaultWeekOffset(), // an Wochenenden automatisch die kommende Woche
+    weekOffset: 0,
     schedule: [], // { id, name, startTime, endTime, rooms__001, rooms__002 }
     modules: [],  // { id, lecture, room, bool }
     todos: loadTodosFromStorage(),
-    moduleNotes: loadModuleNotes(), // { [moduleId]: notizText }
   };
 
   /* ================================================================
@@ -933,7 +874,7 @@
     const bottomRaw = (endMinutes - gridStartMinutes) / 60 * PIXELS_PER_HOUR;
     const top = Math.min(Math.max(topRaw, 0), CALENDAR_HEIGHT);
     const bottom = Math.min(Math.max(bottomRaw, 0), CALENDAR_HEIGHT);
-    const height = Math.max(PIXELS_PER_HOUR * 0.4, bottom - top); // Mindesthöhe, damit auch kurze Termine klickbar/lesbar bleiben
+    const height = Math.max(24, bottom - top); // Mindesthöhe, damit auch kurze Termine klickbar/lesbar bleiben
     return `top:${top}px; height:${height}px;`;
   }
 
@@ -986,8 +927,6 @@
   }
 
   function renderScheduleGrid() {
-    updateCalendarLayout();
-
     const baseMonday = mondayOfIso(todayInBerlin());
     const monday = addDaysToIso(baseMonday, state.weekOffset * 7);
     const days = [0, 1, 2, 3, 4].map(i => addDaysToIso(monday, i));
@@ -1001,7 +940,7 @@
     document.getElementById('dayHeaders').innerHTML = days.map((dayIso, idx) => {
       const isToday = dayIso === todayIso;
       return `
-        <div class="h-14 px-2 flex flex-col items-center justify-center ${isToday ? 'bg-flame/10' : ''}">
+        <div class="px-2 py-3 text-center ${isToday ? 'bg-flame/10' : ''}">
           <p class="text-sm font-medium ${isToday ? 'text-flame' : 'text-ink'}">${WEEKDAYS[idx]}</p>
           <p class="text-xs font-mono ${isToday ? 'text-flame' : 'text-muted'}">${formatIsoShort(dayIso)}</p>
         </div>`;
@@ -1026,7 +965,7 @@
   }
 
   document.getElementById('todayWeekBtn').addEventListener('click', () => {
-    state.weekOffset = getDefaultWeekOffset();
+    state.weekOffset = 0;
     renderScheduleGrid();
     lucide.createIcons();
   });
@@ -1038,13 +977,6 @@
     state.weekOffset = daysBetweenIso(baseMonday, pickedMonday) / 7;
     renderScheduleGrid();
     lucide.createIcons();
-  });
-
-  // Fenstergröße ändert sich (Resize/Rotation) -> Zeitraster neu an den Viewport anpassen
-  let resizeTimeout;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => { renderScheduleGrid(); lucide.createIcons(); }, 150);
   });
 
   document.getElementById('prevWeekBtn').addEventListener('click', () => { state.weekOffset--; renderScheduleGrid(); lucide.createIcons(); });
@@ -1147,16 +1079,12 @@
       return;
     }
 
-    grid.innerHTML = state.modules.map(m => {
-      const hasNote = Boolean(state.moduleNotes[m.id]);
-      return `
-      <div data-module-id="${m.id}" tabindex="0" role="button" aria-label="Notizen zu ${escapeHtml(m.lecture)} öffnen"
-        class="group relative rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col gap-4 cursor-pointer transition hover:ring-2 hover:ring-flame/60 focus:outline-none focus:ring-2 focus:ring-flame/60">
+    grid.innerHTML = state.modules.map(m => `
+      <div class="group relative rounded-2xl border border-line bg-surface p-5 shadow-card flex flex-col gap-4">
         ${state.isAdmin ? `
           <button data-delete-module="${m.id}" class="absolute top-3 right-3 hidden group-hover:flex p-1.5 rounded-md bg-surface2 hover:bg-line text-muted hover:text-alert transition" aria-label="Modul löschen">
             <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
           </button>` : ''}
-        ${hasNote ? `<span class="absolute top-3 ${state.isAdmin ? 'right-11' : 'right-3'} text-flame" title="Notiz vorhanden"><i data-lucide="sticky-note" class="h-3.5 w-3.5"></i></span>` : ''}
         <div class="flex items-center gap-3">
           <div class="h-11 w-11 rounded-full bg-signal/15 flex items-center justify-center shrink-0">
             <i data-lucide="book-open" class="h-5 w-5 text-signal"></i>
@@ -1174,8 +1102,7 @@
               ${m.bool ? 'Ja' : 'Nein'}
             </span>`}
         </div>
-      </div>`;
-    }).join('');
+      </div>`).join('');
   }
 
   document.getElementById('modulesGrid').addEventListener('click', (e) => {
@@ -1184,59 +1111,10 @@
     if (toggleBtn) {
       const mod = state.modules.find(x => String(x.id) === toggleBtn.dataset.toggleModule);
       if (mod) updateModuleStatus(mod.id, !mod.bool);
-      return;
     }
     if (deleteBtn) {
       if (confirm('Dieses Modul wirklich löschen?')) deleteModule(deleteBtn.dataset.deleteModule);
-      return;
     }
-    const card = e.target.closest('[data-module-id]');
-    if (card) {
-      const mod = state.modules.find(x => String(x.id) === card.dataset.moduleId);
-      if (mod) openModuleNotesModal(mod);
-    }
-  });
-
-  // Tastatur-Zugänglichkeit: Enter/Leertaste auf der fokussierten Karte öffnet die Notizen
-  document.getElementById('modulesGrid').addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const card = e.target.closest('[data-module-id]');
-    if (!card || e.target !== card) return;
-    e.preventDefault();
-    const mod = state.modules.find(x => String(x.id) === card.dataset.moduleId);
-    if (mod) openModuleNotesModal(mod);
-  });
-
-  /* ---------------- Modul-Notizen-Modal (localStorage) ---------------- */
-  const moduleNotesModal = document.getElementById('moduleNotesModal');
-  let currentNotesModuleId = null;
-
-  function openModuleNotesModal(mod) {
-    currentNotesModuleId = mod.id;
-    document.getElementById('notesModuleName').textContent = mod.lecture;
-    document.getElementById('moduleNotesTextarea').value = state.moduleNotes[mod.id] || '';
-    moduleNotesModal.classList.remove('hidden');
-    document.getElementById('moduleNotesTextarea').focus();
-  }
-  function closeModuleNotesModal() {
-    moduleNotesModal.classList.add('hidden');
-    currentNotesModuleId = null;
-  }
-  document.getElementById('moduleNotesClose').addEventListener('click', closeModuleNotesModal);
-  moduleNotesModal.addEventListener('click', (e) => { if (e.target === moduleNotesModal) closeModuleNotesModal(); });
-
-  document.getElementById('moduleNotesSave').addEventListener('click', () => {
-    if (currentNotesModuleId === null) return;
-    const text = document.getElementById('moduleNotesTextarea').value.trim();
-    if (text) {
-      state.moduleNotes[currentNotesModuleId] = text;
-    } else {
-      delete state.moduleNotes[currentNotesModuleId];
-    }
-    saveModuleNotes(state.moduleNotes);
-    closeModuleNotesModal();
-    renderModules();
-    lucide.createIcons();
   });
 
   /* ---------------- Admin-Modal: Modul hinzufügen ---------------- */
@@ -1308,9 +1186,6 @@
       e.preventDefault();
       document.getElementById(link.dataset.section).scrollIntoView({ behavior: 'smooth', block: 'start' });
       closeMobileMenu();
-      // Nach Abschluss des Smooth-Scrolls hat sich die Position von #scheduleGrid
-      // im Viewport geändert -> Zeitraster-Höhe neu berechnen.
-      setTimeout(() => { renderScheduleGrid(); lucide.createIcons(); }, 450);
     });
   });
 

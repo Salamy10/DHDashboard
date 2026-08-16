@@ -1,0 +1,28 @@
+Hier sind 3 neue Anpassungen für das Dashboard, die die Usability im Alltag deutlich verbessern. 
+
+Bitte überarbeite den Code der `index.html` und integriere diese 3 Punkte. Gib mir am Ende den vollständigen Code der Datei zurück.
+
+### 1. Scroll-Funktion im Kalender komplett deaktivieren
+Der Kalender soll auf der rechten Seite überhaupt nicht mehr scrollbar sein.
+- Deaktiviere die vertikale und horizontale Scroll-Funktion für das Kalender-Grid komplett (z.B. mit `overflow: hidden;`).
+- WICHTIG: Da man jetzt nicht mehr scrollen kann, passe die CSS-Höhen (z.B. `vh`, `flex-grow` oder die Pixel-Höhe pro Stunde) so an, dass das komplette Raster von 08:00 bis 20:00 Uhr immer vollständig in den sichtbaren Bildschirmbereich (Viewport) passt, ohne dass etwas abgeschnitten wird.
+
+### 2. Wochenend-Logik (Auto-Skip)
+Samstag und Sonntag werden im Raster nicht angezeigt. Wenn ich die Seite am Wochenende öffne, sehe ich daher einen komplett leeren Kalender.
+- Passe die Initialisierungs-Logik an (`currentDate` / Start der Woche): Wenn der heutige Tag ein Samstag oder Sonntag ist, soll der Kalender beim Laden automatisch direkt die *nächste* Woche (ab kommenden Montag) anzeigen.
+
+### 3. Persönliche Notizen für Module (lokal gespeichert)
+Ich möchte mir zu den einzelnen Kursen/Modulen in der Kategorie "Module" Notizen machen können, ohne eine Datenbank dafür zu nutzen.
+- Mache die Modul-Karten klickbar (z.B. mit `cursor-pointer`, Hover-Effekt, Fokus-Ring).
+- Bei Klick öffnet sich ein neues Modal im Dark-Mode-Design.
+- Dieses Modal zeigt den Namen des Moduls als Überschrift und enthält ein großes, gut sichtbares Textfeld (`<textarea>`).
+- Die Notizen, die ich dort eintippe, sollen lokal im Browser (`localStorage`) gespeichert werden, verknüpft mit der ID oder dem exakten Namen des Moduls. 
+- Baue einen "Speichern"-Button ein. Das Modal braucht zudem einen Schließen-Button (X).
+
+### WICHTIG: Bestehende Features behalten
+Achte strikt darauf, dass durch diese neuen Ergänzungen keine der bestehenden Funktionen gelöscht wird:
+- Die automatische Titel-Bereinigung (Entfernen von "Vorlesung", "Verschoben", etc. in der Grid-Ansicht) bleibt bestehen.
+- Das bestehende Klick-Modal für die Kalender-Termine bleibt unangetastet.
+- Die Link-Sektion und die vollständige Supabase-Anbindung bleiben aktiv.
+
+Bitte generiere die Datei einmal komplett durch.
